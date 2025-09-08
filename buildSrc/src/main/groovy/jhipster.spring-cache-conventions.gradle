@@ -1,0 +1,7 @@
+dependencies {
+    implementation "org.springframework.boot:spring-boot-starter-cache"
+    implementation "javax.cache:cache-api"
+    implementation libs.hazelcast.spring
+    implementation libs.hazelcast.hibernate53
+    // jhipster-needle-gradle-dependency - JHipster will add additional dependencies here
+}
