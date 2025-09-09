@@ -1,0 +1,458 @@
+{
+  "applicationConfiguration": {
+    "actions": {
+      "buttons": {
+        "backupConfig": "設定をバックアップ",
+        "compareConfig": "設定を比較",
+        "duplicateConfig": "設定を複製",
+        "exportAll": "すべてエクスポート",
+        "importAll": "すべてインポート",
+        "reloadAll": "すべて再読み込み",
+        "resetAll": "すべてリセット",
+        "restoreConfig": "設定を復元",
+        "saveAll": "すべて保存",
+        "validateAll": "すべて検証"
+      },
+      "title": "アクション"
+    },
+    "chain": {
+      "fields": {
+        "enabled": {
+          "help": "ブロックチェーン統合を有効にする",
+          "label": "ブロックチェーンを有効化"
+        },
+        "registryAddress": {
+          "help": "スマートコントラクトレジストリアドレス",
+          "label": "レジストリアドレス"
+        },
+        "rpcUrl": {
+          "help": "ブロックチェーンRPCエンドポイントURL",
+          "label": "RPC URL"
+        },
+        "trailHeadBlocks": {
+          "help": "ヘッドから遅れるブロック数",
+          "label": "トレイルヘッドブロック"
+        }
+      },
+      "snapshotSync": {
+        "fields": {
+          "batchSize": {
+            "help": "各バッチで処理するアイテム数",
+            "label": "バッチサイズ"
+          },
+          "sleep": {
+            "help": "同期操作間のスリープ時間（秒）",
+            "label": "スリープ時間"
+          },
+          "startingSubId": {
+            "help": "同期の開始サブスクリプションID",
+            "label": "開始サブスクリプションID"
+          },
+          "syncPeriod": {
+            "help": "同期サイクル間の時間（秒）",
+            "label": "同期間隔"
+          }
+        },
+        "title": "スナップショット同期"
+      },
+      "title": "ブロックチェーン設定",
+      "wallet": {
+        "fields": {
+          "allowedSimErrors": {
+            "help": "許可されるシミュレーションエラーメッセージのリスト",
+            "label": "許可されたシミュレーションエラー"
+          },
+          "maxGasLimit": {
+            "help": "トランザクションの最大ガス制限",
+            "label": "最大ガス制限"
+          },
+          "paymentAddress": {
+            "help": "支払いを受け取るアドレス",
+            "label": "支払いアドレス"
+          },
+          "privateKey": {
+            "help": "ウォレットの秘密鍵（安全に保管）",
+            "label": "秘密鍵"
+          }
+        },
+        "title": "ウォレット設定"
+      }
+    },
+    "containers": {
+      "actions": {
+        "add": "コンテナを追加",
+        "duplicate": "コンテナを複製",
+        "moveDown": "下に移動",
+        "moveUp": "上に移動",
+        "remove": "コンテナを削除"
+      },
+      "fields": {
+        "acceptedPayments": {
+          "help": "受け入れる支払いタイプと金額",
+          "label": "受け入れ可能な支払い"
+        },
+        "allowedAddresses": {
+          "help": "アクセスを許可するブロックチェーンアドレスのリスト",
+          "label": "許可されたブロックチェーンアドレス"
+        },
+        "allowedDelegateAddresses": {
+          "help": "アクセスを許可するデリゲートアドレスのリスト",
+          "label": "許可されたデリゲートアドレス"
+        },
+        "allowedIps": {
+          "help": "アクセスを許可するIPアドレスのリスト",
+          "label": "許可されたIPアドレス"
+        },
+        "bearer": {
+          "help": "コンテナの認証トークン",
+          "label": "ベアラートークン"
+        },
+        "command": {
+          "help": "コンテナ内で実行するコマンド",
+          "label": "コマンド"
+        },
+        "description": {
+          "help": "コンテナの人間が読める説明",
+          "label": "説明"
+        },
+        "env": {
+          "help": "コンテナの環境変数",
+          "label": "環境変数"
+        },
+        "external": {
+          "help": "これが外部コンテナかどうか",
+          "label": "外部コンテナ"
+        },
+        "generatesProofs": {
+          "help": "このコンテナが暗号学的プルーフを生成するかどうか",
+          "label": "プルーフ生成"
+        },
+        "gpu": {
+          "help": "このコンテナがGPUアクセスを必要とするかどうか",
+          "label": "GPU必須"
+        },
+        "id": {
+          "help": "コンテナの一意識別子",
+          "label": "コンテナID"
+        },
+        "image": {
+          "help": "Dockerイメージ名とタグ",
+          "label": "Dockerイメージ"
+        },
+        "port": {
+          "help": "コンテナサービスのポート番号",
+          "label": "ポート"
+        },
+        "url": {
+          "help": "コンテナサービスにアクセスするURL",
+          "label": "コンテナURL"
+        },
+        "volumes": {
+          "help": "コンテナのボリュームマウント",
+          "label": "ボリュームマウント"
+        }
+      },
+      "title": "コンテナ設定"
+    },
+    "description": "Noosphere Agentアプリケーション設定の構成",
+    "docker": {
+      "fields": {
+        "password": {
+          "help": "Dockerレジストリ認証用のパスワード",
+          "label": "Dockerパスワード"
+        },
+        "username": {
+          "help": "Dockerレジストリ認証用のユーザー名",
+          "label": "Dockerユーザー名"
+        }
+      },
+      "title": "Docker設定"
+    },
+    "export": "設定をエクスポート",
+    "general": {
+      "api": {
+        "fields": {
+          "documentationEnabled": {
+            "help": "Swagger/OpenAPIドキュメントを有効にする",
+            "label": "APIドキュメント有効化"
+          },
+          "version": {
+            "help": "現在のAPIバージョン",
+            "label": "APIバージョン"
+          }
+        },
+        "title": "API設定"
+      },
+      "backup": {
+        "fields": {
+          "enabled": {
+            "help": "自動バックアップを有効にする",
+            "label": "バックアップ有効化"
+          },
+          "interval": {
+            "help": "バックアップ間隔（時間）",
+            "label": "バックアップ間隔"
+          },
+          "location": {
+            "help": "バックアップファイル保存ディレクトリ",
+            "label": "バックアップ場所"
+          }
+        },
+        "title": "バックアップ設定"
+      },
+      "fields": {
+        "configFilePath": {
+          "help": "設定ファイルへのパス",
+          "label": "設定ファイルパス"
+        },
+        "forwardStats": {
+          "help": "統計転送を有効にする",
+          "label": "統計転送"
+        },
+        "manageContainers": {
+          "help": "自動コンテナ管理を有効にする",
+          "label": "コンテナ管理"
+        },
+        "startupWait": {
+          "help": "サービス開始前の待機時間（秒）",
+          "label": "起動待機時間"
+        }
+      },
+      "liquibase": {
+        "fields": {
+          "asyncStart": {
+            "help": "非同期データベースマイグレーション開始を有効にする",
+            "label": "非同期開始"
+          }
+        },
+        "title": "データベースマイグレーション"
+      },
+      "logging": {
+        "fields": {
+          "file": {
+            "help": "ログファイルへのパス",
+            "label": "ログファイル"
+          },
+          "level": {
+            "help": "アプリケーションのログレベルを設定",
+            "label": "ログレベル"
+          }
+        },
+        "title": "ログ設定"
+      },
+      "monitoring": {
+        "fields": {
+          "healthCheckEnabled": {
+            "help": "ヘルスチェックエンドポイントを有効にする",
+            "label": "ヘルスチェック有効化"
+          },
+          "metricsEnabled": {
+            "help": "アプリケーションメトリクス収集を有効にする",
+            "label": "メトリクス有効化"
+          }
+        },
+        "title": "監視"
+      },
+      "performance": {
+        "fields": {
+          "cacheEnabled": {
+            "help": "アプリケーションレベルキャッシュを有効にする",
+            "label": "キャッシュ有効化"
+          },
+          "threadPoolSize": {
+            "help": "スレッドプール内のスレッド数",
+            "label": "スレッドプールサイズ"
+          }
+        },
+        "title": "パフォーマンス設定"
+      },
+      "security": {
+        "fields": {
+          "enableCsrf": {
+            "help": "クロスサイトリクエストフォージェリ保護を有効にする",
+            "label": "CSRF保護有効化"
+          },
+          "sessionTimeout": {
+            "help": "セッションタイムアウト（分）",
+            "label": "セッションタイムアウト"
+          }
+        },
+        "title": "セキュリティ設定"
+      },
+      "title": "全般設定"
+    },
+    "import": "設定をインポート",
+    "reload": {
+      "actions": {
+        "reload": "設定を再読み込み"
+      },
+      "fields": {
+        "autoReload": {
+          "help": "ファイル変更時に設定を自動再読み込み",
+          "label": "自動再読み込み"
+        },
+        "description": {
+          "help": "ファイルシステムから設定を再読み込み",
+          "label": "説明"
+        },
+        "lastReloaded": {
+          "label": "最後の再読み込み"
+        }
+      },
+      "messages": {
+        "confirm": "設定を再読み込みますか？現在の変更は上書きされます。",
+        "error": "設定の再読み込みに失敗しました",
+        "fileNotFound": "設定ファイルが見つかりません。現在の設定を使用します。",
+        "success": "設定が正常に再読み込みされました"
+      },
+      "title": "設定を再読み込み"
+    },
+    "reset": "デフォルトにリセット",
+    "save": "設定を保存",
+    "server": {
+      "fields": {
+        "port": {
+          "help": "サーバーのポート番号",
+          "label": "サーバーポート"
+        }
+      },
+      "rateLimit": {
+        "fields": {
+          "numRequests": {
+            "help": "許可される最大リクエスト数",
+            "label": "リクエスト数"
+          },
+          "period": {
+            "help": "レート制限の時間間隔（秒）",
+            "label": "時間間隔"
+          }
+        },
+        "title": "レート制限"
+      },
+      "title": "サーバー設定"
+    },
+    "tabs": {
+      "actions": {
+        "close": "タブを閉じる",
+        "closeAll": "すべてのタブを閉じる",
+        "next": "次のタブ",
+        "previous": "前のタブ",
+        "refresh": "タブを更新"
+      },
+      "labels": {
+        "advanced": "詳細設定",
+        "backup": "バックアップ",
+        "chain": "ブロックチェーン",
+        "containers": "コンテナ",
+        "docker": "Docker",
+        "general": "一般",
+        "history": "履歴",
+        "logging": "ログ",
+        "monitoring": "監視",
+        "overview": "概要",
+        "security": "セキュリティ",
+        "server": "サーバー",
+        "templates": "テンプレート",
+        "validation": "検証"
+      },
+      "messages": {
+        "unsavedChanges": {
+          "confirm": "このタブに未保存の変更があります。保存しますか？"
+        }
+      }
+    },
+    "title": "アプリケーション設定",
+    "updated": "設定が正常に更新されました",
+    "validate": "設定を検証",
+    "validation": {
+      "failed": "設定の検証に失敗しました",
+      "messages": {
+        "chain": {
+          "rpcUrl": {
+            "required": "ブロックチェーンが有効な場合、RPC URLは必須です"
+          },
+          "trailHeadBlocks": {
+            "nonNegative": "トレイルヘッドブロックは0以上である必要があります"
+          }
+        },
+        "configFilePath": {
+          "required": "設定ファイルパスは必須です"
+        },
+        "container": {
+          "bearer": {
+            "required": "ベアラートークンは必須です"
+          },
+          "id": {
+            "required": "コンテナIDは必須です"
+          },
+          "image": {
+            "required": "コンテナイメージは必須です"
+          },
+          "port": {
+            "range": "コンテナポートは1から65535の間である必要があります"
+          },
+          "url": {
+            "required": "コンテナURLは必須です"
+          }
+        },
+        "rateLimit": {
+          "numRequests": {
+            "positive": "リクエスト数は0より大きい値である必要があります"
+          },
+          "period": {
+            "positive": "レート制限間隔は0より大きい値である必要があります"
+          }
+        },
+        "server": {
+          "port": {
+            "range": "サーバーポートは1から65535の間である必要があります"
+          }
+        },
+        "snapshotSync": {
+          "batchSize": {
+            "positive": "スナップショット同期のバッチサイズは0より大きい値である必要があります"
+          },
+          "sleep": {
+            "nonNegative": "スナップショット同期のスリープは0以上である必要があります"
+          },
+          "syncPeriod": {
+            "positive": "スナップショット同期間隔は0より大きい値である必要があります"
+          }
+        },
+        "startupWait": {
+          "positive": "起動待機時間は0より大きい値である必要があります"
+        },
+        "wallet": {
+          "maxGasLimit": {
+            "positive": "最大ガス制限は0より大きい値である必要があります"
+          }
+        }
+      },
+      "success": "設定は有効です"
+    }
+  },
+  "email": {
+    "activation": {
+      "greeting": "{0} 様",
+      "text1": "あなたの noosphereAgent アカウントが作成されました。以下のURLをクリックしてアクティベートしてください。",
+      "text2": "よろしくお願いいたします。",
+      "title": "noosphereAgent のアカウントアクティベート"
+    },
+    "creation": {
+      "text1": "あなたの noosphereAgent アカウントが作成されました。以下のURLをクリックしてアクセスしてください。"
+    },
+    "reset": {
+      "greeting": "{0} 様",
+      "text1": "あなたの noosphereAgent アカウントでパスワードのリセットが要求されました。リセットするには以下のURLをクリックしてください。",
+      "text2": "よろしくお願いいたします。",
+      "title": "noosphereAgent のパスワードリセット"
+    },
+    "signature": "noosphereAgent チームより"
+  },
+  "error": {
+    "message": "メッセージ:",
+    "status": "ステータス:",
+    "subtitle": "エラーが発生しました。",
+    "title": "リクエストは処理されませんでした。"
+  }
+}

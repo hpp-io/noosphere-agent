@@ -24,6 +24,9 @@ const adminMenuItems = () => (
     <MenuItem icon="tasks" to="/admin/logs">
       <Translate contentKey="global.menu.admin.logs">Logs</Translate>
     </MenuItem>
+    <MenuItem icon="tasks" to="/admin/application-configuration">
+      <Translate contentKey="global.menu.admin.conig">Configs</Translate>
+    </MenuItem>
     {/* jhipster-needle-add-element-to-admin-menu - JHipster will add entities to the admin menu here */}
   </>
 );

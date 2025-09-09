@@ -52,7 +52,7 @@ spring:
     cache: false
 
 server:
-  port: 8080
+  port: ${application.server.port:8080}
   # make sure requests the proxy uri instead of the server one
   forward-headers-strategy: native
 
@@ -104,4 +104,56 @@ jhipster:
 # https://www.jhipster.tech/common-application-properties/
 # ===================================================================
 
-# application:
+application:
+  # 개발 환경 특화 설정
+  startupWait: 2.0 # 개발 환경에서는 빠른 시작
+
+  # 개발 환경 서버 설정
+  server:
+    port: 8080
+    rateLimit:
+      numRequests: 1000 # 개발 환경에서는 관대한 rate limit
+      period: 60
+
+  # 개발 환경 블록체인 설정
+  chain:
+    registryAddress: '0x1234567890123456789012345678901234567890'
+    wallet:
+      privateKey: '${WALLET_PRIVATE_KEY:dev-private-key}'
+      paymentAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
+
+  # 개발 환경 Docker 설정
+  docker:
+    username: '${DOCKER_USERNAME:}'
+    password: '${DOCKER_PASSWORD:}'
+
+  # 개발 환경 컨테이너 설정
+  containers:
+    - id: 'test-container-dev'
+      image: 'noosphere/test:dev'
+      url: 'http://localhost:8001'
+      bearer: '${CONTAINER_BEARER_TOKEN:dev-bearer-token}'
+      port: 8001
+      external: false
+      gpu: false # 개발 환경에서는 GPU 사용 안함
+      acceptedPayments:
+        ETH: 1000000
+        USDC: 100000
+      allowedIps:
+        - '127.0.0.1'
+        - '192.168.1.0/24'
+        - '10.0.0.0/8' # 개발 환경에서는 더 넓은 IP 대역 허용
+      allowedAddresses:
+        - '0x1234567890123456789012345678901234567890'
+      allowedDelegateAddresses:
+        - '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
+      description: 'Development test container'
+      command: 'python server.py --debug'
+      env:
+        MODEL_PATH: '/models/test-dev'
+        BATCH_SIZE: '2'
+        DEBUG: 'true'
+      generatesProofs: false # 개발 환경에서는 proof 생성 비활성화
+      volumes:
+        - '/tmp/dev-models:/models'
+        - '/tmp/dev-cache:/cache'

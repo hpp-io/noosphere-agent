@@ -70,7 +70,7 @@ spring:
 #     ciphers: TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 ,TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 ,TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 ,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,TLS_DHE_RSA_WITH_AES_128_CBC_SHA,TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,TLS_DHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_CBC_SHA256,TLS_RSA_WITH_AES_256_CBC_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA,TLS_RSA_WITH_CAMELLIA_256_CBC_SHA,TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA,TLS_RSA_WITH_CAMELLIA_128_CBC_SHA
 # ===================================================================
 server:
-  port: 8080
+  port: ${application.server.port:8080}
   shutdown: graceful # see https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-graceful-shutdown
   compression:
     enabled: true
@@ -121,4 +121,55 @@ jhipster:
 # https://www.jhipster.tech/common-application-properties/
 # ===================================================================
 
-# application:
+application:
+  # Production environment specific settings
+  startupWait: 10.0 # Longer startup wait for production
+
+  # Production server settings
+  server:
+    port: ${SERVER_PORT:8080}
+    rateLimit:
+      numRequests: ${RATE_LIMIT_REQUESTS:100}
+      period: ${RATE_LIMIT_PERIOD:60}
+
+  # Production blockchain settings
+  chain:
+    enabled: ${BLOCKCHAIN_ENABLED:true}
+    rpcUrl: ${BLOCKCHAIN_RPC_URL:}
+    registryAddress: ${REGISTRY_ADDRESS:}
+    wallet:
+      privateKey: ${WALLET_PRIVATE_KEY:}
+      paymentAddress: ${PAYMENT_ADDRESS:}
+
+  # Production Docker settings
+  docker:
+    username: ${DOCKER_USERNAME:}
+    password: ${DOCKER_PASSWORD:}
+
+  # Production container settings
+  containers:
+    - id: ${CONTAINER_1_ID:test-container}
+      image: ${CONTAINER_1_IMAGE:noosphere/test:latest}
+      url: ${CONTAINER_1_URL:http://localhost:8001}
+      bearer: ${CONTAINER_1_BEARER:}
+      port: ${CONTAINER_1_PORT:8001}
+      external: ${CONTAINER_1_EXTERNAL:false}
+      gpu: ${CONTAINER_1_GPU:true}
+      acceptedPayments:
+        ETH: ${CONTAINER_1_ETH_LIMIT:2147483647}
+        USDC: ${CONTAINER_1_USDC_LIMIT:1000000}
+      allowedIps:
+        - ${CONTAINER_1_ALLOWED_IP_1:127.0.0.1}
+      allowedAddresses:
+        - ${CONTAINER_1_ALLOWED_ADDRESS_1:}
+      allowedDelegateAddresses:
+        - ${CONTAINER_1_ALLOWED_DELEGATE_1:}
+      description: ${CONTAINER_1_DESCRIPTION:Production test container}
+      command: ${CONTAINER_1_COMMAND:python server.py}
+      env:
+        MODEL_PATH: ${CONTAINER_1_MODEL_PATH:/models/test}
+        BATCH_SIZE: ${CONTAINER_1_BATCH_SIZE:8}
+      generatesProofs: ${CONTAINER_1_GENERATES_PROOFS:true}
+      volumes:
+        - ${CONTAINER_1_VOLUME_MODELS:/data/models:/models}
+        - ${CONTAINER_1_VOLUME_CACHE:/data/cache:/cache}

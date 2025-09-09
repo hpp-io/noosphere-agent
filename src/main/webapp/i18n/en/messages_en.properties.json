@@ -1,0 +1,458 @@
+{
+  "applicationConfiguration": {
+    "actions": {
+      "buttons": {
+        "backupConfig": "Backup Configuration",
+        "compareConfig": "Compare Configurations",
+        "duplicateConfig": "Duplicate Configuration",
+        "exportAll": "Export All",
+        "importAll": "Import All",
+        "reloadAll": "Reload All",
+        "resetAll": "Reset All",
+        "restoreConfig": "Restore Configuration",
+        "saveAll": "Save All",
+        "validateAll": "Validate All"
+      },
+      "title": "Actions"
+    },
+    "chain": {
+      "fields": {
+        "enabled": {
+          "help": "Enable blockchain integration",
+          "label": "Enable Blockchain"
+        },
+        "registryAddress": {
+          "help": "Smart contract registry address",
+          "label": "Registry Address"
+        },
+        "rpcUrl": {
+          "help": "Blockchain RPC endpoint URL",
+          "label": "RPC URL"
+        },
+        "trailHeadBlocks": {
+          "help": "Number of blocks to trail behind the head",
+          "label": "Trail Head Blocks"
+        }
+      },
+      "snapshotSync": {
+        "fields": {
+          "batchSize": {
+            "help": "Number of items to process in each batch",
+            "label": "Batch Size"
+          },
+          "sleep": {
+            "help": "Sleep time between sync operations (seconds)",
+            "label": "Sleep Duration"
+          },
+          "startingSubId": {
+            "help": "Starting subscription ID for synchronization",
+            "label": "Starting Subscription ID"
+          },
+          "syncPeriod": {
+            "help": "Time between sync cycles (seconds)",
+            "label": "Sync Period"
+          }
+        },
+        "title": "Snapshot Synchronization"
+      },
+      "title": "Blockchain Configuration",
+      "wallet": {
+        "fields": {
+          "allowedSimErrors": {
+            "help": "List of allowed simulation error messages",
+            "label": "Allowed Simulation Errors"
+          },
+          "maxGasLimit": {
+            "help": "Maximum gas limit for transactions",
+            "label": "Max Gas Limit"
+          },
+          "paymentAddress": {
+            "help": "Address for receiving payments",
+            "label": "Payment Address"
+          },
+          "privateKey": {
+            "help": "Wallet private key (keep secure)",
+            "label": "Private Key"
+          }
+        },
+        "title": "Wallet Configuration"
+      }
+    },
+    "containers": {
+      "actions": {
+        "add": "Add Container",
+        "duplicate": "Duplicate Container",
+        "moveDown": "Move Down",
+        "moveUp": "Move Up",
+        "remove": "Remove Container"
+      },
+      "fields": {
+        "acceptedPayments": {
+          "help": "Payment types and amounts accepted",
+          "label": "Accepted Payments"
+        },
+        "allowedAddresses": {
+          "help": "List of blockchain addresses allowed to access",
+          "label": "Allowed Blockchain Addresses"
+        },
+        "allowedDelegateAddresses": {
+          "help": "List of delegate addresses allowed to access",
+          "label": "Allowed Delegate Addresses"
+        },
+        "allowedIps": {
+          "help": "List of IP addresses allowed to access",
+          "label": "Allowed IP Addresses"
+        },
+        "bearer": {
+          "help": "Authentication token for the container",
+          "label": "Bearer Token"
+        },
+        "command": {
+          "help": "Command to run in the container",
+          "label": "Command"
+        },
+        "description": {
+          "help": "Human-readable description of the container",
+          "label": "Description"
+        },
+        "env": {
+          "help": "Environment variables for the container",
+          "label": "Environment Variables"
+        },
+        "external": {
+          "help": "Whether this is an external container",
+          "label": "External Container"
+        },
+        "generatesProofs": {
+          "help": "Whether this container generates cryptographic proofs",
+          "label": "Generates Proofs"
+        },
+        "gpu": {
+          "help": "Whether this container requires GPU access",
+          "label": "GPU Required"
+        },
+        "id": {
+          "help": "Unique identifier for the container",
+          "label": "Container ID"
+        },
+        "image": {
+          "help": "Docker image name and tag",
+          "label": "Docker Image"
+        },
+        "port": {
+          "help": "Port number for the container service",
+          "label": "Port"
+        },
+        "url": {
+          "help": "URL to access the container service",
+          "label": "Container URL"
+        },
+        "volumes": {
+          "help": "Volume mounts for the container",
+          "label": "Volume Mounts"
+        }
+      },
+      "title": "Container Configuration"
+    },
+    "description": "Configure Noosphere Agent application settings",
+    "docker": {
+      "fields": {
+        "password": {
+          "help": "Password for Docker registry authentication",
+          "label": "Docker Password"
+        },
+        "username": {
+          "help": "Username for Docker registry authentication",
+          "label": "Docker Username"
+        }
+      },
+      "title": "Docker Configuration"
+    },
+    "export": "Export Configuration",
+    "general": {
+      "api": {
+        "fields": {
+          "documentationEnabled": {
+            "help": "Enable Swagger/OpenAPI documentation",
+            "label": "Enable API Documentation"
+          },
+          "version": {
+            "help": "Current API version",
+            "label": "API Version"
+          }
+        },
+        "title": "API Configuration"
+      },
+      "backup": {
+        "fields": {
+          "enabled": {
+            "help": "Enable automatic backup",
+            "label": "Enable Backup"
+          },
+          "interval": {
+            "help": "Backup interval in hours",
+            "label": "Backup Interval"
+          },
+          "location": {
+            "help": "Directory for storing backup files",
+            "label": "Backup Location"
+          }
+        },
+        "title": "Backup Settings"
+      },
+      "fields": {
+        "configFilePath": {
+          "help": "Path to the configuration file",
+          "label": "Config File Path"
+        },
+        "forwardStats": {
+          "help": "Enable statistics forwarding",
+          "label": "Forward Statistics"
+        },
+        "manageContainers": {
+          "help": "Enable automatic container management",
+          "label": "Manage Containers"
+        },
+        "startupWait": {
+          "help": "Time to wait before starting services (seconds)",
+          "label": "Startup Wait Time"
+        }
+      },
+      "liquibase": {
+        "fields": {
+          "asyncStart": {
+            "help": "Enable asynchronous database migration startup",
+            "label": "Async Start"
+          }
+        },
+        "title": "Database Migration"
+      },
+      "logging": {
+        "fields": {
+          "file": {
+            "help": "Path to the log file",
+            "label": "Log File"
+          },
+          "level": {
+            "help": "Set the application log level",
+            "label": "Log Level"
+          }
+        },
+        "title": "Logging Configuration"
+      },
+      "monitoring": {
+        "fields": {
+          "healthCheckEnabled": {
+            "help": "Enable health check endpoint",
+            "label": "Enable Health Check"
+          },
+          "metricsEnabled": {
+            "help": "Enable application metrics collection",
+            "label": "Enable Metrics"
+          }
+        },
+        "title": "Monitoring"
+      },
+      "performance": {
+        "fields": {
+          "cacheEnabled": {
+            "help": "Enable application-level caching",
+            "label": "Enable Caching"
+          },
+          "threadPoolSize": {
+            "help": "Number of threads in the thread pool",
+            "label": "Thread Pool Size"
+          }
+        },
+        "title": "Performance Settings"
+      },
+      "security": {
+        "fields": {
+          "enableCsrf": {
+            "help": "Enable Cross-Site Request Forgery protection",
+            "label": "Enable CSRF Protection"
+          },
+          "sessionTimeout": {
+            "help": "Session timeout in minutes",
+            "label": "Session Timeout"
+          }
+        },
+        "title": "Security Settings"
+      },
+      "title": "General Settings"
+    },
+    "import": "Import Configuration",
+    "reload": {
+      "actions": {
+        "reload": "Reload Configuration"
+      },
+      "fields": {
+        "autoReload": {
+          "help": "Automatically reload configuration when file changes",
+          "label": "Auto Reload"
+        },
+        "description": {
+          "help": "Reload configuration from the file system",
+          "label": "Description"
+        },
+        "lastReloaded": {
+          "label": "Last reloaded"
+        }
+      },
+      "messages": {
+        "confirm": "Are you sure you want to reload the configuration? This will override current changes.",
+        "error": "Failed to reload configuration",
+        "fileNotFound": "Configuration file not found. Using current configuration.",
+        "success": "Configuration reloaded successfully"
+      },
+      "title": "Reload Configuration"
+    },
+    "reset": "Reset to Defaults",
+    "save": "Save Configuration",
+    "server": {
+      "fields": {
+        "port": {
+          "help": "Port number for the server",
+          "label": "Server Port"
+        }
+      },
+      "rateLimit": {
+        "fields": {
+          "numRequests": {
+            "help": "Maximum number of requests allowed",
+            "label": "Number of Requests"
+          },
+          "period": {
+            "help": "Time period for rate limiting (seconds)",
+            "label": "Time Period"
+          }
+        },
+        "title": "Rate Limiting"
+      },
+      "title": "Server Configuration"
+    },
+    "tabs": {
+      "actions": {
+        "close": "Close Tab",
+        "closeAll": "Close All Tabs",
+        "next": "Next Tab",
+        "previous": "Previous Tab",
+        "refresh": "Refresh Tab"
+      },
+      "labels": {
+        "advanced": "Advanced",
+        "backup": "Backup",
+        "chain": "Blockchain",
+        "containers": "Containers",
+        "docker": "Docker",
+        "general": "General",
+        "history": "History",
+        "logging": "Logging",
+        "monitoring": "Monitoring",
+        "overview": "Overview",
+        "security": "Security",
+        "server": "Server",
+        "templates": "Templates",
+        "validation": "Validation"
+      },
+      "messages": {
+        "unsavedChanges": {
+          "confirm": "You have unsaved changes in this tab. Do you want to save them?"
+        }
+      }
+    },
+    "title": "Application Configuration",
+    "updated": "Configuration updated successfully",
+    "validate": "Validate Configuration",
+    "validation": {
+      "failed": "Configuration validation failed",
+      "messages": {
+        "chain": {
+          "rpcUrl": {
+            "required": "RPC URL is required when blockchain is enabled"
+          },
+          "trailHeadBlocks": {
+            "nonNegative": "Trail head blocks must be non-negative"
+          }
+        },
+        "configFilePath": {
+          "required": "Config file path is required"
+        },
+        "container": {
+          "bearer": {
+            "required": "Bearer token is required"
+          },
+          "id": {
+            "required": "Container ID is required"
+          },
+          "image": {
+            "required": "Container image is required"
+          },
+          "port": {
+            "range": "Container port must be between 1 and 65535"
+          },
+          "url": {
+            "required": "Container URL is required"
+          }
+        },
+        "rateLimit": {
+          "numRequests": {
+            "positive": "Number of requests must be greater than 0"
+          },
+          "period": {
+            "positive": "Rate limit period must be greater than 0"
+          }
+        },
+        "server": {
+          "port": {
+            "range": "Server port must be between 1 and 65535"
+          }
+        },
+        "snapshotSync": {
+          "batchSize": {
+            "positive": "Snapshot sync batch size must be greater than 0"
+          },
+          "sleep": {
+            "nonNegative": "Snapshot sync sleep must be non-negative"
+          },
+          "syncPeriod": {
+            "positive": "Snapshot sync period must be greater than 0"
+          }
+        },
+        "startupWait": {
+          "positive": "Startup wait must be greater than 0"
+        },
+        "wallet": {
+          "maxGasLimit": {
+            "positive": "Max gas limit must be greater than 0"
+          }
+        }
+      },
+      "success": "Configuration is valid"
+    }
+  },
+  "email": {
+    "activation": {
+      "greeting": "Dear {0}",
+      "text1": "Your noosphereAgent account has been created, please click on the URL below to activate it:",
+      "text2": "Regards,",
+      "title": "noosphereAgent account activation"
+    },
+    "creation": {
+      "text1": "Your noosphereAgent account has been created, please click on the URL below to access it:"
+    },
+    "reset": {
+      "greeting": "Dear {0}",
+      "text1": "For your noosphereAgent account a password reset was requested, please click on the URL below to reset it:",
+      "text2": "Regards,",
+      "title": "noosphereAgent password reset"
+    },
+    "signature": "noosphereAgent Team."
+  },
+  "error": {
+    "message": "Message:",
+    "status": "Status:",
+    "subtitle": "Sorry, an error has occurred.",
+    "title": "Your request cannot be processed"
+  }
+}
