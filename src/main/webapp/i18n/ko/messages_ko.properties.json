@@ -1,0 +1,458 @@
+{
+  "applicationConfiguration": {
+    "actions": {
+      "buttons": {
+        "backupConfig": "설정 백업",
+        "compareConfig": "설정 비교",
+        "duplicateConfig": "설정 복제",
+        "exportAll": "모두 내보내기",
+        "importAll": "모두 가져오기",
+        "reloadAll": "모두 다시 로드",
+        "resetAll": "모두 재설정",
+        "restoreConfig": "설정 복원",
+        "saveAll": "모두 저장",
+        "validateAll": "모두 검증"
+      },
+      "title": "작업"
+    },
+    "chain": {
+      "fields": {
+        "enabled": {
+          "help": "블록체인 통합 활성화",
+          "label": "블록체인 활성화"
+        },
+        "registryAddress": {
+          "help": "스마트 계약 레지스트리 주소",
+          "label": "레지스트리 주소"
+        },
+        "rpcUrl": {
+          "help": "블록체인 RPC 엔드포인트 URL",
+          "label": "RPC URL"
+        },
+        "trailHeadBlocks": {
+          "help": "헤드에서 뒤처지는 블록 수",
+          "label": "트레일 헤드 블록"
+        }
+      },
+      "snapshotSync": {
+        "fields": {
+          "batchSize": {
+            "help": "각 배치에서 처리할 항목 수",
+            "label": "배치 크기"
+          },
+          "sleep": {
+            "help": "동기화 작업 간 대기 시간(초)",
+            "label": "대기 시간"
+          },
+          "startingSubId": {
+            "help": "동기화를 위한 시작 구독 ID",
+            "label": "시작 구독 ID"
+          },
+          "syncPeriod": {
+            "help": "동기화 주기 간 시간(초)",
+            "label": "동기화 주기"
+          }
+        },
+        "title": "스냅샷 동기화"
+      },
+      "title": "블록체인 설정",
+      "wallet": {
+        "fields": {
+          "allowedSimErrors": {
+            "help": "허용되는 시뮬레이션 오류 메시지 목록",
+            "label": "허용된 시뮬레이션 오류"
+          },
+          "maxGasLimit": {
+            "help": "트랜잭션의 최대 가스 한도",
+            "label": "최대 가스 한도"
+          },
+          "paymentAddress": {
+            "help": "지불을 받을 주소",
+            "label": "지불 주소"
+          },
+          "privateKey": {
+            "help": "지갑 개인 키(안전하게 보관)",
+            "label": "개인 키"
+          }
+        },
+        "title": "지갑 설정"
+      }
+    },
+    "containers": {
+      "actions": {
+        "add": "컨테이너 추가",
+        "duplicate": "컨테이너 복제",
+        "moveDown": "아래로 이동",
+        "moveUp": "위로 이동",
+        "remove": "컨테이너 제거"
+      },
+      "fields": {
+        "acceptedPayments": {
+          "help": "허용되는 지불 타입과 금액",
+          "label": "허용된 지불"
+        },
+        "allowedAddresses": {
+          "help": "접근을 허용하는 블록체인 주소 목록",
+          "label": "허용된 블록체인 주소"
+        },
+        "allowedDelegateAddresses": {
+          "help": "접근을 허용하는 위임 주소 목록",
+          "label": "허용된 위임 주소"
+        },
+        "allowedIps": {
+          "help": "접근을 허용하는 IP 주소 목록",
+          "label": "허용된 IP 주소"
+        },
+        "bearer": {
+          "help": "컨테이너의 인증 토큰",
+          "label": "베어러 토큰"
+        },
+        "command": {
+          "help": "컨테이너에서 실행할 명령어",
+          "label": "명령어"
+        },
+        "description": {
+          "help": "컨테이너의 사람이 읽을 수 있는 설명",
+          "label": "설명"
+        },
+        "env": {
+          "help": "컨테이너의 환경 변수",
+          "label": "환경 변수"
+        },
+        "external": {
+          "help": "이것이 외부 컨테이너인지 여부",
+          "label": "외부 컨테이너"
+        },
+        "generatesProofs": {
+          "help": "이 컨테이너가 암호학적 증명을 생성하는지 여부",
+          "label": "증명 생성"
+        },
+        "gpu": {
+          "help": "이 컨테이너가 GPU 액세스를 필요로 하는지 여부",
+          "label": "GPU 필요"
+        },
+        "id": {
+          "help": "컨테이너의 고유 식별자",
+          "label": "컨테이너 ID"
+        },
+        "image": {
+          "help": "Docker 이미지 이름과 태그",
+          "label": "Docker 이미지"
+        },
+        "port": {
+          "help": "컨테이너 서비스의 포트 번호",
+          "label": "포트"
+        },
+        "url": {
+          "help": "컨테이너 서비스에 접근하는 URL",
+          "label": "컨테이너 URL"
+        },
+        "volumes": {
+          "help": "컨테이너의 볼륨 마운트",
+          "label": "볼륨 마운트"
+        }
+      },
+      "title": "컨테이너 설정"
+    },
+    "description": "Noosphere Agent 애플리케이션 설정 구성",
+    "docker": {
+      "fields": {
+        "password": {
+          "help": "Docker 레지스트리 인증용 비밀번호",
+          "label": "Docker 비밀번호"
+        },
+        "username": {
+          "help": "Docker 레지스트리 인증용 사용자명",
+          "label": "Docker 사용자명"
+        }
+      },
+      "title": "Docker 설정"
+    },
+    "export": "설정 내보내기",
+    "general": {
+      "api": {
+        "fields": {
+          "documentationEnabled": {
+            "help": "Swagger/OpenAPI 문서 활성화",
+            "label": "API 문서 활성화"
+          },
+          "version": {
+            "help": "현재 API 버전",
+            "label": "API 버전"
+          }
+        },
+        "title": "API 설정"
+      },
+      "backup": {
+        "fields": {
+          "enabled": {
+            "help": "자동 백업 활성화",
+            "label": "백업 활성화"
+          },
+          "interval": {
+            "help": "백업 간격(시간)",
+            "label": "백업 간격"
+          },
+          "location": {
+            "help": "백업 파일 저장 디렉토리",
+            "label": "백업 위치"
+          }
+        },
+        "title": "백업 설정"
+      },
+      "fields": {
+        "configFilePath": {
+          "help": "설정 파일의 경로",
+          "label": "설정 파일 경로"
+        },
+        "forwardStats": {
+          "help": "통계 전달 활성화",
+          "label": "통계 전달"
+        },
+        "manageContainers": {
+          "help": "자동 컨테이너 관리 활성화",
+          "label": "컨테이너 관리"
+        },
+        "startupWait": {
+          "help": "서비스 시작 전 대기 시간(초)",
+          "label": "시작 대기 시간"
+        }
+      },
+      "liquibase": {
+        "fields": {
+          "asyncStart": {
+            "help": "비동기 데이터베이스 마이그레이션 시작 활성화",
+            "label": "비동기 시작"
+          }
+        },
+        "title": "데이터베이스 마이그레이션"
+      },
+      "logging": {
+        "fields": {
+          "file": {
+            "help": "로그 파일 경로",
+            "label": "로그 파일"
+          },
+          "level": {
+            "help": "애플리케이션 로그 레벨 설정",
+            "label": "로그 레벨"
+          }
+        },
+        "title": "로깅 설정"
+      },
+      "monitoring": {
+        "fields": {
+          "healthCheckEnabled": {
+            "help": "헬스 체크 엔드포인트 활성화",
+            "label": "헬스 체크 활성화"
+          },
+          "metricsEnabled": {
+            "help": "애플리케이션 메트릭 수집 활성화",
+            "label": "메트릭 활성화"
+          }
+        },
+        "title": "모니터링"
+      },
+      "performance": {
+        "fields": {
+          "cacheEnabled": {
+            "help": "애플리케이션 레벨 캐싱 활성화",
+            "label": "캐싱 활성화"
+          },
+          "threadPoolSize": {
+            "help": "스레드 풀의 스레드 수",
+            "label": "스레드 풀 크기"
+          }
+        },
+        "title": "성능 설정"
+      },
+      "security": {
+        "fields": {
+          "enableCsrf": {
+            "help": "크로스 사이트 요청 위조 보호 활성화",
+            "label": "CSRF 보호 활성화"
+          },
+          "sessionTimeout": {
+            "help": "세션 타임아웃(분)",
+            "label": "세션 타임아웃"
+          }
+        },
+        "title": "보안 설정"
+      },
+      "title": "일반 설정"
+    },
+    "import": "설정 가져오기",
+    "reload": {
+      "actions": {
+        "reload": "설정 다시 로드"
+      },
+      "fields": {
+        "autoReload": {
+          "help": "파일 변경 시 설정을 자동으로 다시 로드",
+          "label": "자동 다시 로드"
+        },
+        "description": {
+          "help": "파일 시스템에서 설정 다시 로드",
+          "label": "설명"
+        },
+        "lastReloaded": {
+          "label": "마지막 로드"
+        }
+      },
+      "messages": {
+        "confirm": "설정을 다시 로드하시겠습니까? 현재 변경사항이 덮어쓰여집니다.",
+        "error": "설정 다시 로드에 실패했습니다",
+        "fileNotFound": "설정 파일을 찾을 수 없습니다. 현재 설정을 사용합니다.",
+        "success": "설정이 성공적으로 다시 로드되었습니다"
+      },
+      "title": "설정 다시 로드"
+    },
+    "reset": "기본값으로 재설정",
+    "save": "설정 저장",
+    "server": {
+      "fields": {
+        "port": {
+          "help": "서버의 포트 번호",
+          "label": "서버 포트"
+        }
+      },
+      "rateLimit": {
+        "fields": {
+          "numRequests": {
+            "help": "허용되는 최대 요청 수",
+            "label": "요청 수"
+          },
+          "period": {
+            "help": "요청 제한 시간 간격(초)",
+            "label": "시간 간격"
+          }
+        },
+        "title": "요청 제한"
+      },
+      "title": "서버 설정"
+    },
+    "tabs": {
+      "actions": {
+        "close": "탭 닫기",
+        "closeAll": "모든 탭 닫기",
+        "next": "다음 탭",
+        "previous": "이전 탭",
+        "refresh": "탭 새로고침"
+      },
+      "labels": {
+        "advanced": "고급 설정",
+        "backup": "백업",
+        "chain": "블록체인",
+        "containers": "컨테이너",
+        "docker": "Docker",
+        "general": "일반",
+        "history": "히스토리",
+        "logging": "로깅",
+        "monitoring": "모니터링",
+        "overview": "개요",
+        "security": "보안",
+        "server": "서버",
+        "templates": "템플릿",
+        "validation": "검증"
+      },
+      "messages": {
+        "unsavedChanges": {
+          "confirm": "이 탭에 저장되지 않은 변경사항이 있습니다. 저장하시겠습니까?"
+        }
+      }
+    },
+    "title": "애플리케이션 설정",
+    "updated": "설정이 성공적으로 업데이트되었습니다",
+    "validate": "설정 검증",
+    "validation": {
+      "failed": "설정 검증에 실패했습니다",
+      "messages": {
+        "chain": {
+          "rpcUrl": {
+            "required": "블록체인이 활성화된 경우 RPC URL이 필요합니다"
+          },
+          "trailHeadBlocks": {
+            "nonNegative": "트레일 헤드 블록은 0 이상이어야 합니다"
+          }
+        },
+        "configFilePath": {
+          "required": "설정 파일 경로는 필수입니다"
+        },
+        "container": {
+          "bearer": {
+            "required": "베어러 토큰은 필수입니다"
+          },
+          "id": {
+            "required": "컨테이너 ID는 필수입니다"
+          },
+          "image": {
+            "required": "컨테이너 이미지는 필수입니다"
+          },
+          "port": {
+            "range": "컨테이너 포트는 1에서 65535 사이여야 합니다"
+          },
+          "url": {
+            "required": "컨테이너 URL은 필수입니다"
+          }
+        },
+        "rateLimit": {
+          "numRequests": {
+            "positive": "요청 수는 0보다 큰 값이어야 합니다"
+          },
+          "period": {
+            "positive": "요청 제한 기간은 0보다 큰 값이어야 합니다"
+          }
+        },
+        "server": {
+          "port": {
+            "range": "서버 포트는 1에서 65535 사이여야 합니다"
+          }
+        },
+        "snapshotSync": {
+          "batchSize": {
+            "positive": "스냅샷 동기화 배치 크기는 0보다 큰 값이어야 합니다"
+          },
+          "sleep": {
+            "nonNegative": "스냅샷 동기화 대기 시간은 0 이상이어야 합니다"
+          },
+          "syncPeriod": {
+            "positive": "스냅샷 동기화 주기는 0보다 큰 값이어야 합니다"
+          }
+        },
+        "startupWait": {
+          "positive": "시작 대기 시간은 0보다 큰 값이어야 합니다"
+        },
+        "wallet": {
+          "maxGasLimit": {
+            "positive": "최대 가스 한도는 0보다 큰 값이어야 합니다"
+          }
+        }
+      },
+      "success": "설정이 유효합니다"
+    }
+  },
+  "email": {
+    "activation": {
+      "greeting": "{0}님 안녕하세요",
+      "text1": "noosphereAgent 계정이 생성되었습니다. 아래 URL을 클릭해 인증을 완료해 주세요.",
+      "text2": "감사합니다,",
+      "title": "noosphereAgent 인증"
+    },
+    "creation": {
+      "text1": "Your noosphereAgent account has been created, please click on the URL below to access it:"
+    },
+    "reset": {
+      "greeting": "{0}님 안녕하세요",
+      "text1": "noosphereAgent 계정 비밀번호 변경 요청을 하셨습니다. 아래 URL을 클릭해 비밀번호를 변경해 주세요:",
+      "text2": "감사합니다.",
+      "title": "noosphereAgent 비밀번호 변경"
+    },
+    "signature": "noosphereAgent."
+  },
+  "error": {
+    "message": "메세지:",
+    "status": "상태:",
+    "subtitle": "죄송합니다, 에러가 발생했습니다.",
+    "title": "요청이 진행되지 못했습니다"
+  }
+}

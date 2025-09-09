@@ -30,6 +30,12 @@ const Admin = Loadable({
   loader: () => import(/* webpackChunkName: "administration" */ 'app/modules/administration'),
   loading: () => loading,
 });
+
+const ApplicationConfiguration = Loadable({
+  loader: () => import(/* webpackChunkName: "application-configuration" */ 'app/modules/administration/application-configuration'),
+  loading: () => loading,
+});
+
 const AppRoutes = () => {
   const pageLocation = useLocation();
   React.useEffect(() => {
@@ -62,6 +68,14 @@ const AppRoutes = () => {
           element={
             <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
               <Admin />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="admin/application-configuration/*"
+          element={
+            <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+              <ApplicationConfiguration />
             </PrivateRoute>
           }
         />

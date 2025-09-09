@@ -1,0 +1,141 @@
+@startuml
+!theme plain
+title Configuration Classes Diagram
+
+' --- Style Definitions ---
+skinparam defaultFontColor #000
+skinparam arrowColor #333
+skinparam shadowing false
+skinparam borderRadius 5
+
+skinparam class {
+    BackgroundColor #F5F5DC
+    BorderColor #8B4513
+    borderThickness 1.5
+}
+skinparam stereotypeCBackgroundColor #FEF9E7
+
+' --- Root Configuration Class ---
+class Config <<@ConfigurationProperties>> {
+  .. 최상위 설정 객체, 모든 설정을 포함 ..
+  --
+  + containers: List<NoosphereContainer>
+  + chain: ConfigChain
+  + docker: Optional<ConfigDocker>
+  + forwardStats: bool
+  + log: ConfigLog
+  + manageContainers: bool
+  + redis: ConfigRedis
+  + server: ConfigServer
+  + startupWait: float
+}
+
+package "Server" {
+    class ConfigServer {
+      .. REST API 서버 관련 설정 ..
+      --
+      + port: int
+      + rateLimit: ConfigRateLimit
+    }
+
+    class ConfigRateLimit {
+      .. API 속도 제한 설정 ..
+      --
+      + numRequests: int
+      + period: int
+    }
+}
+
+
+package "Blockchain" {
+    class ConfigChain {
+      .. 블록체인 연동 관련 설정 ..
+      --
+      + enabled: bool
+      + rpcUrl: Optional<str>
+      + trailHeadBlocks: int
+      + registryAddress: Optional<str>
+      + wallet: Optional<ConfigWallet>
+      + snapshotSync: ConfigSnapshotSync
+    }
+
+    class ConfigWallet {
+      .. 노드 지갑 및 트랜잭션 관련 설정 ..
+      --
+      + maxGasLimit: int
+      + privateKey: Optional<str>
+      + paymentAddress: Optional<str>
+      + allowedSimErrors: List<str>
+    }
+
+    class ConfigSnapshotSync {
+      .. 온체인 구독 정보 동기화 관련 설정 ..
+      --
+      + sleep: float
+      + batchSize: int
+      + startingSubId: int
+      + syncPeriod: float
+    }
+}
+
+package "Container" {
+    class NoosphereContainer {
+      .. 개별 추론 컨테이너 설정 ..
+      --
+      + id: str
+      + image: str
+      + url: str
+      + bearer: str
+      + port: int
+      + external: bool
+      + gpu: bool
+      + acceptedPayments: dict<str, int>
+      + allowedIps: List<str>
+      + allowedAddresses: List<str>
+      + allowedDelegateAddresses: List<str>
+      + description: str
+      + command: str
+      + env: dict<str, Any>
+      + generatesProofs: bool
+      + volumes: List<str>
+    }
+
+    class ConfigDocker {
+      .. Docker Hub 또는 Private Registry 인증 정보 ..
+      --
+      + username: str
+      + password: str
+    }
+}
+
+package "Infrastructure" {
+    class ConfigRedis {
+      .. Redis 연결 정보 ..
+      --
+      + host: str
+      + port: int
+    }
+
+    class ConfigLog {
+      .. 로깅 관련 설정 ..
+      --
+      + path: str
+      + maxFileSize: int
+      + backupCount: int
+    }
+}
+
+
+' --- Relationships (Composition) ---
+Config "1" *-- "1" ConfigServer
+Config "1" *-- "1" ConfigChain
+Config "1" *-- "0..1" ConfigDocker
+Config "1" *-- "1" ConfigLog
+Config "1" *-- "1" ConfigRedis
+Config "1" *-- "0..*" NoosphereContainer
+
+ConfigServer "1" *-- "1" ConfigRateLimit
+ConfigChain "1" *-- "0..1" ConfigWallet
+ConfigChain "1" *-- "1" ConfigSnapshotSync
+
+@enduml

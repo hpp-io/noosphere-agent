@@ -1,0 +1,458 @@
+{
+  "applicationConfiguration": {
+    "actions": {
+      "buttons": {
+        "backupConfig": "备份配置",
+        "compareConfig": "比较配置",
+        "duplicateConfig": "复制配置",
+        "exportAll": "导出全部",
+        "importAll": "导入全部",
+        "reloadAll": "重新加载全部",
+        "resetAll": "重置全部",
+        "restoreConfig": "还原配置",
+        "saveAll": "保存全部",
+        "validateAll": "验证全部"
+      },
+      "title": "操作"
+    },
+    "chain": {
+      "fields": {
+        "enabled": {
+          "help": "启用区块链集成",
+          "label": "启用区块链"
+        },
+        "registryAddress": {
+          "help": "智能合约注册表地址",
+          "label": "注册表地址"
+        },
+        "rpcUrl": {
+          "help": "区块链RPC端点URL",
+          "label": "RPC URL"
+        },
+        "trailHeadBlocks": {
+          "help": "落后于头部的区块数",
+          "label": "尾随头部区块"
+        }
+      },
+      "snapshotSync": {
+        "fields": {
+          "batchSize": {
+            "help": "每批处理的项目数",
+            "label": "批处理大小"
+          },
+          "sleep": {
+            "help": "同步操作间的休眠时间（秒）",
+            "label": "休眠时间"
+          },
+          "startingSubId": {
+            "help": "用于同步的起始订阅ID",
+            "label": "起始订阅ID"
+          },
+          "syncPeriod": {
+            "help": "同步周期之间的时间（秒）",
+            "label": "同步周期"
+          }
+        },
+        "title": "快照同步"
+      },
+      "title": "区块链配置",
+      "wallet": {
+        "fields": {
+          "allowedSimErrors": {
+            "help": "允许的模拟错误消息列表",
+            "label": "允许的模拟错误"
+          },
+          "maxGasLimit": {
+            "help": "交易的最大燃料限制",
+            "label": "最大燃料限制"
+          },
+          "paymentAddress": {
+            "help": "接收付款的地址",
+            "label": "付款地址"
+          },
+          "privateKey": {
+            "help": "钱包私钥（请妥善保管）",
+            "label": "私钥"
+          }
+        },
+        "title": "钱包配置"
+      }
+    },
+    "containers": {
+      "actions": {
+        "add": "添加容器",
+        "duplicate": "复制容器",
+        "moveDown": "向下移动",
+        "moveUp": "向上移动",
+        "remove": "删除容器"
+      },
+      "fields": {
+        "acceptedPayments": {
+          "help": "接受的付款类型和金额",
+          "label": "接受的付款"
+        },
+        "allowedAddresses": {
+          "help": "允许访问的区块链地址列表",
+          "label": "允许的区块链地址"
+        },
+        "allowedDelegateAddresses": {
+          "help": "允许访问的委托地址列表",
+          "label": "允许的委托地址"
+        },
+        "allowedIps": {
+          "help": "允许访问的IP地址列表",
+          "label": "允许的IP地址"
+        },
+        "bearer": {
+          "help": "容器的认证令牌",
+          "label": "Bearer令牌"
+        },
+        "command": {
+          "help": "在容器中运行的命令",
+          "label": "命令"
+        },
+        "description": {
+          "help": "容器的可读描述",
+          "label": "描述"
+        },
+        "env": {
+          "help": "容器的环境变量",
+          "label": "环境变量"
+        },
+        "external": {
+          "help": "这是否是外部容器",
+          "label": "外部容器"
+        },
+        "generatesProofs": {
+          "help": "此容器是否生成加密证明",
+          "label": "生成证明"
+        },
+        "gpu": {
+          "help": "此容器是否需要GPU访问",
+          "label": "需要GPU"
+        },
+        "id": {
+          "help": "容器的唯一标识符",
+          "label": "容器ID"
+        },
+        "image": {
+          "help": "Docker镜像名称和标签",
+          "label": "Docker镜像"
+        },
+        "port": {
+          "help": "容器服务的端口号",
+          "label": "端口"
+        },
+        "url": {
+          "help": "访问容器服务的URL",
+          "label": "容器URL"
+        },
+        "volumes": {
+          "help": "容器的卷挂载",
+          "label": "卷挂载"
+        }
+      },
+      "title": "容器配置"
+    },
+    "description": "配置Noosphere Agent应用程序设置",
+    "docker": {
+      "fields": {
+        "password": {
+          "help": "Docker注册表认证的密码",
+          "label": "Docker密码"
+        },
+        "username": {
+          "help": "Docker注册表认证的用户名",
+          "label": "Docker用户名"
+        }
+      },
+      "title": "Docker配置"
+    },
+    "export": "导出配置",
+    "general": {
+      "api": {
+        "fields": {
+          "documentationEnabled": {
+            "help": "启用Swagger/OpenAPI文档",
+            "label": "启用API文档"
+          },
+          "version": {
+            "help": "当前API版本",
+            "label": "API版本"
+          }
+        },
+        "title": "API配置"
+      },
+      "backup": {
+        "fields": {
+          "enabled": {
+            "help": "启用自动备份",
+            "label": "启用备份"
+          },
+          "interval": {
+            "help": "备份间隔（小时）",
+            "label": "备份间隔"
+          },
+          "location": {
+            "help": "备份文件存储目录",
+            "label": "备份位置"
+          }
+        },
+        "title": "备份设置"
+      },
+      "fields": {
+        "configFilePath": {
+          "help": "配置文件的路径",
+          "label": "配置文件路径"
+        },
+        "forwardStats": {
+          "help": "启用统计转发",
+          "label": "转发统计"
+        },
+        "manageContainers": {
+          "help": "启用自动容器管理",
+          "label": "管理容器"
+        },
+        "startupWait": {
+          "help": "启动服务前的等待时间（秒）",
+          "label": "启动等待时间"
+        }
+      },
+      "liquibase": {
+        "fields": {
+          "asyncStart": {
+            "help": "启用异步数据库迁移启动",
+            "label": "异步启动"
+          }
+        },
+        "title": "数据库迁移"
+      },
+      "logging": {
+        "fields": {
+          "file": {
+            "help": "日志文件路径",
+            "label": "日志文件"
+          },
+          "level": {
+            "help": "设置应用程序日志级别",
+            "label": "日志级别"
+          }
+        },
+        "title": "日志配置"
+      },
+      "monitoring": {
+        "fields": {
+          "healthCheckEnabled": {
+            "help": "启用健康检查端点",
+            "label": "启用健康检查"
+          },
+          "metricsEnabled": {
+            "help": "启用应用程序指标收集",
+            "label": "启用指标"
+          }
+        },
+        "title": "监控"
+      },
+      "performance": {
+        "fields": {
+          "cacheEnabled": {
+            "help": "启用应用程序级缓存",
+            "label": "启用缓存"
+          },
+          "threadPoolSize": {
+            "help": "线程池中的线程数",
+            "label": "线程池大小"
+          }
+        },
+        "title": "性能设置"
+      },
+      "security": {
+        "fields": {
+          "enableCsrf": {
+            "help": "启用跨站请求伪造保护",
+            "label": "启用CSRF保护"
+          },
+          "sessionTimeout": {
+            "help": "会话超时时间（分钟）",
+            "label": "会话超时"
+          }
+        },
+        "title": "安全设置"
+      },
+      "title": "常规设置"
+    },
+    "import": "导入配置",
+    "reload": {
+      "actions": {
+        "reload": "重新加载配置"
+      },
+      "fields": {
+        "autoReload": {
+          "help": "文件更改时自动重新加载配置",
+          "label": "自动重新加载"
+        },
+        "description": {
+          "help": "从文件系统重新加载配置",
+          "label": "描述"
+        },
+        "lastReloaded": {
+          "label": "上次加载时间"
+        }
+      },
+      "messages": {
+        "confirm": "您确定要重新加载配置吗？当前的更改将被覆盖。",
+        "error": "配置重新加载失败",
+        "fileNotFound": "找不到配置文件。使用当前配置。",
+        "success": "配置重新加载成功"
+      },
+      "title": "重新加载配置"
+    },
+    "reset": "重置为默认值",
+    "save": "保存配置",
+    "server": {
+      "fields": {
+        "port": {
+          "help": "服务器的端口号",
+          "label": "服务器端口"
+        }
+      },
+      "rateLimit": {
+        "fields": {
+          "numRequests": {
+            "help": "允许的最大请求数",
+            "label": "请求数量"
+          },
+          "period": {
+            "help": "速率限制的时间周期（秒）",
+            "label": "时间周期"
+          }
+        },
+        "title": "速率限制"
+      },
+      "title": "服务器配置"
+    },
+    "tabs": {
+      "actions": {
+        "close": "关闭标签",
+        "closeAll": "关闭所有标签",
+        "next": "下一个标签",
+        "previous": "上一个标签",
+        "refresh": "刷新标签"
+      },
+      "labels": {
+        "advanced": "高级设置",
+        "backup": "备份",
+        "chain": "区块链",
+        "containers": "容器",
+        "docker": "Docker",
+        "general": "常规",
+        "history": "历史记录",
+        "logging": "日志",
+        "monitoring": "监控",
+        "overview": "概览",
+        "security": "安全",
+        "server": "服务器",
+        "templates": "模板",
+        "validation": "验证"
+      },
+      "messages": {
+        "unsavedChanges": {
+          "confirm": "此标签页中有未保存的更改。您要保存吗？"
+        }
+      }
+    },
+    "title": "应用程序配置",
+    "updated": "配置已成功更新",
+    "validate": "验证配置",
+    "validation": {
+      "failed": "配置验证失败",
+      "messages": {
+        "chain": {
+          "rpcUrl": {
+            "required": "启用区块链时需要RPC URL"
+          },
+          "trailHeadBlocks": {
+            "nonNegative": "尾随头部区块必须非负数"
+          }
+        },
+        "configFilePath": {
+          "required": "配置文件路径是必需的"
+        },
+        "container": {
+          "bearer": {
+            "required": "Bearer令牌是必需的"
+          },
+          "id": {
+            "required": "容器ID是必需的"
+          },
+          "image": {
+            "required": "容器镜像是必需的"
+          },
+          "port": {
+            "range": "容器端口必须在1到65535之间"
+          },
+          "url": {
+            "required": "容器URL是必需的"
+          }
+        },
+        "rateLimit": {
+          "numRequests": {
+            "positive": "请求数必须大于0"
+          },
+          "period": {
+            "positive": "速率限制周期必须大于0"
+          }
+        },
+        "server": {
+          "port": {
+            "range": "服务器端口必须在1到65535之间"
+          }
+        },
+        "snapshotSync": {
+          "batchSize": {
+            "positive": "快照同步批处理大小必须大于0"
+          },
+          "sleep": {
+            "nonNegative": "快照同步休眠时间必须非负数"
+          },
+          "syncPeriod": {
+            "positive": "快照同步周期必须大于0"
+          }
+        },
+        "startupWait": {
+          "positive": "启动等待时间必须大于0"
+        },
+        "wallet": {
+          "maxGasLimit": {
+            "positive": "最大燃料限制必须大于0"
+          }
+        }
+      },
+      "success": "配置有效"
+    }
+  },
+  "email": {
+    "activation": {
+      "greeting": "亲爱的 {0}",
+      "text1": "您的 noosphereAgent 账号已创建成功, 请点击下列链接启用您的账号:",
+      "text2": "祝您使用愉快,",
+      "title": "noosphereAgent 激活账号"
+    },
+    "creation": {
+      "text1": "您的 noosphereAgent   账户已经创建， 请点击以下链接访问："
+    },
+    "reset": {
+      "greeting": "亲爱的 {0}",
+      "text1": "您的 noosphereAgent账号密码重置请求已收到, 请点击以下链接重置密码:",
+      "text2": "祝您使用愉快,",
+      "title": "noosphereAgent 密码重置"
+    },
+    "signature": "noosphereAgent 团队"
+  },
+  "error": {
+    "message": "消息:",
+    "status": "状态:",
+    "subtitle": "抱歉,发生了一个错误.",
+    "title": "您的请求无法被处理"
+  }
+}

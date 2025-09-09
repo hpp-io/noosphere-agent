@@ -86,6 +86,7 @@ export default tseslint.config(
       'no-invalid-this': 'off',
       'react/prop-types': 'off',
       'react/display-name': 'off',
+      'prettier/prettier': 'off', // 🔹 이 줄 추가
     },
   },
   {
@@ -112,5 +113,5 @@ export default tseslint.config(
     },
   },
   // jhipster-needle-eslint-add-config - JHipster will add additional config here
-  prettier,
+  // prettier, // 🔹 이 줄 주석 처리
 );

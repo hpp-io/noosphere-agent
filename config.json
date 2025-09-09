@@ -1,0 +1,60 @@
+{
+  "forwardStats": true,
+  "manageContainers": true,
+  "startupWait": 5.0,
+  "server": {
+    "port": 8080,
+    "rateLimit": {
+      "numRequests": 100,
+      "period": 60
+    }
+  },
+  "chain": {
+    "enabled": true,
+    "rpcUrl": "http://localhost:8545",
+    "trailHeadBlocks": 10,
+    "registryAddress": "0x1234567890123456789012345678901234567890",
+    "wallet": {
+      "maxGasLimit": 1000000,
+      "privateKey": "your-private-key",
+      "paymentAddress": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+      "allowedSimErrors": ["execution reverted", "out of gas"]
+    },
+    "snapshotSync": {
+      "sleep": 1.0,
+      "batchSize": 100,
+      "startingSubId": 0,
+      "syncPeriod": 300.0
+    }
+  },
+  "docker": {
+    "username": "your-docker-username",
+    "password": "your-docker-password"
+  },
+  "containers": [
+    {
+      "id": "llama-inference",
+      "image": "noosphere/llama:latest",
+      "url": "http://localhost:8001",
+      "bearer": "bearer-token-123",
+      "port": 8001,
+      "external": false,
+      "gpu": true,
+      "acceptedPayments": {
+        "ETH": 2147483647,
+        "USDC": 1000000
+      },
+      "allowedIps": ["127.0.0.1", "192.168.1.0/24"],
+      "allowedAddresses": ["0x1234567890123456789012345678901234567890"],
+      "allowedDelegateAddresses": ["0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"],
+      "description": "LLaMA inference container",
+      "command": "python server.py",
+      "env": {
+        "MODEL_PATH": "/models/llama",
+        "BATCH_SIZE": "4"
+      },
+      "generatesProofs": true,
+      "volumes": ["/host/models:/models", "/host/cache:/cache"]
+    }
+  ]
+}
