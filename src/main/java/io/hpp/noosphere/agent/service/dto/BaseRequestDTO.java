@@ -13,6 +13,6 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 public abstract class BaseRequestDTO {
 
-    private UUID id; // 모든 요청이 공통으로 가질 수 있는 필드 예시
+    private UUID id;
     private String clientIp;
 }
