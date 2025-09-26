@@ -1,5 +1,6 @@
 package io.hpp.noosphere.agent.service;
 
+import io.hpp.noosphere.agent.service.dto.DelegatedRequestDTO;
 import io.hpp.noosphere.agent.service.dto.OffchainRequestDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,10 @@ public class RequestValidatorService {
     private static final Logger LOG = LoggerFactory.getLogger(RequestValidatorService.class);
 
     public boolean validateOffChainRequest(OffchainRequestDTO requestDTO) {
+        return true;
+    }
+
+    public boolean validateDelegatedRequest(DelegatedRequestDTO requestDTO) {
         return true;
     }
 }
