@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <!--
+      Added the Computation, ComputationCounter, and ContainerCounter entities.
+  -->
+    <changeSet id="20250925000001-1" author="jjang">
+        <addColumn tableName="computation">
+            <column name="updated_at" type="timestamp">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- 기존 레코드들에 대해 updated_at을 created_at 값으로 초기화 -->
+    <changeSet id="20250925000001-2" author="jjang">
+        <sql>
+            UPDATE computation SET updated_at = created_at WHERE updated_at IS NULL;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

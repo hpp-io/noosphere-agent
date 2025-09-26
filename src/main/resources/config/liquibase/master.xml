@@ -10,9 +10,14 @@
     <property name="uuidType" value="uuid" dbms="postgresql"/>
     <property name="datetimeType" value="datetime" dbms="postgresql"/>
     <property name="timeType" value="time(6)" dbms="postgresql"/>
+    <!-- JHipster-managed properties use snake case, so use json_type instead of jsonType -->
+    <property name="json_type" value="jsonb" dbms="postgresql"/>
+    <property name="json_type" value="clob" dbms="h2"/>
 
     <include file="config/liquibase/changelog/00000000000000_initial_schema.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-changelog - JHipster will add liquibase changelogs here -->
     <!-- jhipster-needle-liquibase-add-constraints-changelog - JHipster will add liquibase constraints changelogs here -->
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
+    <include file="/config/liquibase/changelog/20250922000001_added_noosphere_entities.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20250925000001_add_updated_at_column.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>

@@ -7,9 +7,6 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -61,7 +58,7 @@ public class ApplicationConfigurationService {
         }
 
         // 파일에 저장
-        String configFilePath = applicationProperties.getConfigFilePath();
+        String configFilePath = applicationProperties.getNoosphere().getConfigFilePath();
         File configFile = new File(configFilePath);
 
         // 부모 디렉토리가 없으면 생성
@@ -89,7 +86,7 @@ public class ApplicationConfigurationService {
     public ApplicationProperties reloadConfiguration() throws IOException {
         log.debug("Reloading application configuration from file");
 
-        String configFilePath = applicationProperties.getConfigFilePath();
+        String configFilePath = applicationProperties.getNoosphere().getConfigFilePath();
         File configFile = new File(configFilePath);
 
         if (!configFile.exists()) {

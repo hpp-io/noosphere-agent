@@ -1,5 +1,6 @@
 package io.hpp.noosphere.agent.config;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.util.ArrayList;
@@ -23,36 +24,9 @@ public class ApplicationProperties {
     // 기존 JHipster Liquibase 설정
     private final Liquibase liquibase = new Liquibase();
 
-    // Noosphere Agent 특화 설정들
-    @NotBlank
-    private String configFilePath = "config/application-runtime.json";
-
-    @NotNull
-    private Boolean forwardStats = true;
-
-    @NotNull
-    private Boolean manageContainers = true;
-
-    @Positive
-    private Double startupWait = 5.0;
-
-    @Valid
-    @NotNull
-    @NestedConfigurationProperty
-    private NoosphereServer server = new NoosphereServer();
-
-    @Valid
-    @NotNull
-    @NestedConfigurationProperty
-    private Chain chain = new Chain();
-
     @Valid
     @NestedConfigurationProperty
-    private Docker docker;
-
-    @Valid
-    @NotNull
-    private List<NoosphereContainer> containers = new ArrayList<>();
+    private NoosphereConfig noosphere = new NoosphereConfig();
 
     // jhipster-needle-application-properties-property
 
@@ -61,68 +35,12 @@ public class ApplicationProperties {
         return liquibase;
     }
 
-    public String getConfigFilePath() {
-        return configFilePath;
+    public NoosphereConfig getNoosphere() {
+        return noosphere;
     }
 
-    public void setConfigFilePath(String configFilePath) {
-        this.configFilePath = configFilePath;
-    }
-
-    public Boolean getForwardStats() {
-        return forwardStats;
-    }
-
-    public void setForwardStats(Boolean forwardStats) {
-        this.forwardStats = forwardStats;
-    }
-
-    public Boolean getManageContainers() {
-        return manageContainers;
-    }
-
-    public void setManageContainers(Boolean manageContainers) {
-        this.manageContainers = manageContainers;
-    }
-
-    public Double getStartupWait() {
-        return startupWait;
-    }
-
-    public void setStartupWait(Double startupWait) {
-        this.startupWait = startupWait;
-    }
-
-    public NoosphereServer getServer() {
-        return server;
-    }
-
-    public void setServer(NoosphereServer server) {
-        this.server = server;
-    }
-
-    public Chain getChain() {
-        return chain;
-    }
-
-    public void setChain(Chain chain) {
-        this.chain = chain;
-    }
-
-    public Docker getDocker() {
-        return docker;
-    }
-
-    public void setDocker(Docker docker) {
-        this.docker = docker;
-    }
-
-    public List<NoosphereContainer> getContainers() {
-        return containers;
-    }
-
-    public void setContainers(List<NoosphereContainer> containers) {
-        this.containers = containers;
+    public void setNoosphere(NoosphereConfig noosphere) {
+        this.noosphere = noosphere;
     }
 
     // 내부 클래스들
@@ -136,6 +54,111 @@ public class ApplicationProperties {
 
         public void setAsyncStart(Boolean asyncStart) {
             this.asyncStart = asyncStart;
+        }
+    }
+
+    @Validated
+    public static class NoosphereConfig {
+
+        @NotBlank
+        private String configFilePath = "config/application-runtime.json";
+
+        @NotNull
+        @JsonProperty("forwardStats")
+        private Boolean forwardStats = true;
+
+        @NotNull
+        @JsonProperty("manageContainers")
+        private Boolean manageContainers = true;
+
+        @Positive
+        @JsonProperty("startupWait")
+        private Double startupWait = 5.0;
+
+        @Valid
+        @NotNull
+        @JsonProperty("server")
+        @NestedConfigurationProperty
+        private NoosphereServer server = new NoosphereServer();
+
+        @Valid
+        @NotNull
+        @JsonProperty("chain")
+        @NestedConfigurationProperty
+        private Chain chain = new Chain();
+
+        @Valid
+        @JsonProperty("docker")
+        @NestedConfigurationProperty
+        private Docker docker;
+
+        @Valid
+        @NotNull
+        @JsonProperty("containers")
+        private List<NoosphereContainer> containers = new ArrayList<>();
+
+        public String getConfigFilePath() {
+            return configFilePath;
+        }
+
+        public void setConfigFilePath(String configFilePath) {
+            this.configFilePath = configFilePath;
+        }
+
+        public Boolean getForwardStats() {
+            return forwardStats;
+        }
+
+        public void setForwardStats(Boolean forwardStats) {
+            this.forwardStats = forwardStats;
+        }
+
+        public Boolean getManageContainers() {
+            return manageContainers;
+        }
+
+        public void setManageContainers(Boolean manageContainers) {
+            this.manageContainers = manageContainers;
+        }
+
+        public Double getStartupWait() {
+            return startupWait;
+        }
+
+        public void setStartupWait(Double startupWait) {
+            this.startupWait = startupWait;
+        }
+
+        public NoosphereServer getServer() {
+            return server;
+        }
+
+        public void setServer(NoosphereServer server) {
+            this.server = server;
+        }
+
+        public Chain getChain() {
+            return chain;
+        }
+
+        public void setChain(Chain chain) {
+            this.chain = chain;
+        }
+
+        public Docker getDocker() {
+            return docker;
+        }
+
+        public void setDocker(Docker docker) {
+            this.docker = docker;
+        }
+
+        public List<NoosphereContainer> getContainers() {
+            return containers;
+        }
+
+        public void setContainers(List<NoosphereContainer> containers) {
+            this.containers = containers;
         }
     }
 
