@@ -1,0 +1,72 @@
+@startuml
+!theme plain
+title Subscription Data Structures - Class Diagram
+
+' --- Style Definitions ---
+skinparam defaultFontColor #000
+skinparam arrowColor #333
+skinparam shadowing false
+skinparam borderRadius 5
+
+skinparam class {
+    BackgroundColor #E8DAEF
+    BorderColor #8E44AD
+    borderThickness 1.5
+}
+skinparam stereotypeCBackgroundColor #D2B4DE
+
+package "Subscription Management" {
+
+    class Subscription {
+        .. 온체인 구독(Subscription)의 상태와 로직을 관리하는 핵심 클래스 ..
+        --
+        '<< Properties >>'
+        + id: int
+        + owner: ChecksumAddress
+        + containers: list<str>
+        + containers_hash: str
+        + active: bool
+        + completed: bool
+        + interval: int
+        + requires_proof: bool
+        + provides_payment: bool
+        --
+        '<< Methods >>'
+        + get_response_count(interval: int): int
+        + set_response_count(interval: int, count: int): void
+        + get_node_replied(interval: int): bool
+        + set_node_replied(interval: int): void
+        + get_delegate_subscription_typed_data(...): SignableMessage
+    }
+
+    class SerializedSubscription <<dataclass>> {
+        .. 메시지 전송을 위해 직렬화된 구독 정보 ..
+        --
+        + owner: str
+        + active_at: int
+        + period: int
+        + frequency: int
+        + redundancy: int
+        + containers: str
+        + lazy: bool
+        + verifier: str
+        + payment_amount: int
+        + payment_token: str
+        + wallet: str
+        --
+        + deserialize(lookup: ContainerLookup): Subscription
+    }
+
+    class "chain.container_lookup.ContainerLookup" as ContainerLookup {
+        .. 컨테이너 해시를 실제 컨테이너 ID 목록으로 변환 ..
+        --
+        + get_containers(hash: str): list<str>
+    }
+
+}
+
+' --- Relationships ---
+SerializedSubscription ..> Subscription : "deserializes to"
+Subscription "1" *-- "1" ContainerLookup : "uses"
+
+@enduml

@@ -1,0 +1,130 @@
+@startuml
+!theme plain
+title Message Data Structures - Class Diagram
+
+' --- Style Definitions ---
+skinparam defaultFontColor #000
+skinparam arrowColor #333
+skinparam shadowing false
+skinparam borderRadius 5
+
+skinparam class {
+    BackgroundColor #EBF5FB
+    BorderColor #3498DB
+    borderThickness 1.5
+}
+skinparam stereotypeCBackgroundColor #D4E6F1
+
+skinparam enum {
+    BackgroundColor #D5F5E3
+    BorderColor #58D68D
+}
+skinparam note {
+    BackgroundColor #FEF9E7
+    BorderColor #F1C40F
+}
+
+package "Core Message Classes" {
+
+    enum MessageType {
+      .. 메시지 유형 구분 ..
+      --
+      OffchainJob
+      DelegatedSubscription
+      SubscriptionCreated
+    }
+
+    class BaseMessage <<dataclass>> {
+      .. 오프체인 메시지의 기본 구조 ..
+      --
+      + id: str
+      + ip: str
+    }
+
+    class OffchainJobMessage <<dataclass>> {
+      .. 오프체인 작업 요청 ..
+      --
+      + containers: list<str>
+      + data: dict<Any, Any>
+      + type: MessageType
+      + requires_proof: Optional<bool>
+    }
+
+    class DelegatedSubscriptionMessage <<dataclass>> {
+      .. 위임된 구독 요청 ..
+      --
+      + subscription: SerializedSubscription
+      + signature: CoordinatorSignatureParams
+      + data: dict<Any, Any>
+      + type: MessageType
+      + requires_proof: Optional<bool>
+    }
+
+    class SubscriptionCreatedMessage <<dataclass>> {
+      .. 온체인 구독 생성 이벤트 ..
+      --
+      + subscription: Subscription
+      + type: MessageType
+      + requires_proof: Optional<bool>
+    }
+
+    class GuardianError <<dataclass>> {
+      .. Guardian 검증 실패 시 생성되는 오류 ..
+      --
+      + message: PrefilterMessage
+      + error: str
+      + params: dict<str, Any>
+    }
+
+    ' --- Core Relationships ---
+    BaseMessage <|-- OffchainJobMessage
+    BaseMessage <|-- DelegatedSubscriptionMessage
+
+    OffchainJobMessage ..> MessageType
+    DelegatedSubscriptionMessage ..> MessageType
+    SubscriptionCreatedMessage ..> MessageType
+}
+
+
+package "Type Aliases (Union Types)" {
+    note as OffchainNote
+      <b>Type Alias: OffchainMessage</b>
+      Union[
+        OffchainJobMessage,
+        DelegatedSubscriptionMessage
+      ]
+    end note
+
+    note as CoordinatorNote
+      <b>Type Alias: CoordinatorMessage</b>
+      Union[
+        SubscriptionCreatedMessage
+      ]
+    end note
+
+    note as OnchainNote
+      <b>Type Alias: OnchainMessage</b>
+      Union[
+        CoordinatorMessage,
+        DelegatedSubscriptionMessage
+      ]
+    end note
+
+    note as PrefilterNote
+      <b>Type Alias: PrefilterMessage</b>
+      Union[
+        OffchainMessage,
+        CoordinatorMessage
+      ]
+    end note
+}
+
+' --- Connections to Aliases ---
+(OffchainJobMessage, DelegatedSubscriptionMessage) .r. OffchainNote
+SubscriptionCreatedMessage .d. CoordinatorNote
+(CoordinatorNote, DelegatedSubscriptionMessage) .r. OnchainNote
+(OffchainNote, CoordinatorNote) .d. PrefilterNote
+
+GuardianError "1" *-- "1" PrefilterNote : uses
+
+@enduml

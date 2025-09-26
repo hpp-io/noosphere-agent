@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Added the Computation, ComputationCounter, and ContainerCounter entities.
+    -->
+    <changeSet id="20250922000001-1" author="jjang">
+        <createTable tableName="computation">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="status" type="varchar(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="containers" type="${json_type}">
+                <constraints nullable="true" />
+            </column>
+            <column name="data" type="${json_type}">
+                <constraints nullable="true" />
+            </column>
+            <column name="results" type="${json_type}">
+                <constraints nullable="true" />
+            </column>
+            <column name="requires_proof" type="boolean">
+                <constraints nullable="true" />
+            </column>
+            <column name="client_ip" type="varchar(255)">
+                <constraints nullable="true" />
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed_at" type="timestamp">
+                <constraints nullable="true" />
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20250922000001-2" author="jjang">
+        <createTable tableName="computation_counter">
+            <column name="location" type="varchar(255)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="status" type="varchar(255)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="count" type="bigint" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_updated" type="timestamp"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20250922000001-3" author="jjang">
+        <createTable tableName="container_counter">
+            <column name="container_id" type="varchar(255)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="success_count" type="bigint" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="failed_count" type="bigint" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_updated" type="timestamp"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

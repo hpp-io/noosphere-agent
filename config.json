@@ -33,28 +33,18 @@
   },
   "containers": [
     {
-      "id": "llama-inference",
-      "image": "noosphere/llama:latest",
-      "url": "http://localhost:8001",
-      "bearer": "bearer-token-123",
-      "port": 8001,
-      "external": false,
-      "gpu": true,
-      "acceptedPayments": {
-        "ETH": 2147483647,
-        "USDC": 1000000
-      },
-      "allowedIps": ["127.0.0.1", "192.168.1.0/24"],
-      "allowedAddresses": ["0x1234567890123456789012345678901234567890"],
-      "allowedDelegateAddresses": ["0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"],
-      "description": "LLaMA inference container",
-      "command": "python server.py",
-      "env": {
-        "MODEL_PATH": "/models/llama",
-        "BATCH_SIZE": "4"
-      },
-      "generatesProofs": true,
-      "volumes": ["/host/models:/models", "/host/cache:/cache"]
+      "id": "hello-world",
+      "image": "ritualnetwork/hello-world-infernet:latest",
+      "external": true,
+      "port": "3000",
+      "allowedDelegateAddresses": [],
+      "allowedAddresses": [],
+      "allowedIps": [],
+      "command": "--bind=0.0.0.0:3000 --workers=2",
+      "env": {},
+      "volumes": [],
+      "acceptedPayments": {},
+      "generatesProofs": false
     }
   ]
 }
