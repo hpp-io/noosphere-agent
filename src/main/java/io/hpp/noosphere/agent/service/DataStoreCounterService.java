@@ -8,6 +8,7 @@ import io.hpp.noosphere.agent.service.dto.enumeration.ComputationLocation;
 import io.hpp.noosphere.agent.service.dto.enumeration.ComputationStatus;
 import io.hpp.noosphere.agent.service.dto.enumeration.ContainerStatus;
 import jakarta.annotation.PostConstruct;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,32 +104,14 @@ public class DataStoreCounterService {
     }
 
     /**
-     * 컨테이너 카운터 증가
+     * 컨테이너 카운터 증가 (UPSERT 버전)
      */
     @Transactional
     public void incrementContainerCounter(String containerId, ContainerStatus status) {
-        int updated;
-        if (status == ContainerStatus.SUCCESS) {
-            updated = containerCounterRepository.incrementSuccess(containerId);
-        } else {
-            updated = containerCounterRepository.incrementFailure(containerId);
-        }
+        long successIncrement = (status == ContainerStatus.SUCCESS) ? 1L : 0L;
+        long failedIncrement = (status == ContainerStatus.FAILED) ? 1L : 0L;
 
-        if (updated == 0) {
-            // 카운터가 존재하지 않으면 새로 생성합니다.
-            // 동시성 문제를 피하기 위해 findById로 다시 한번 확인합니다.
-            containerCounterRepository
-                .findById(containerId)
-                .orElseGet(() -> {
-                    ContainerCounter newCounter = new ContainerCounter(containerId, 0L, 0L);
-                    if (status == ContainerStatus.SUCCESS) {
-                        newCounter.setSuccessCount(1L);
-                    } else {
-                        newCounter.setFailedCount(1L);
-                    }
-                    return containerCounterRepository.save(newCounter);
-                });
-        }
+        containerCounterRepository.upsertCounter(containerId, successIncrement, failedIncrement);
 
         log.debug("Container counter incremented - container: {}, status: {}", containerId, status);
     }
