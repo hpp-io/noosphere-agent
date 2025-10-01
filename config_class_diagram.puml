@@ -54,7 +54,7 @@ package "Blockchain" {
       + enabled: bool
       + rpcUrl: Optional<str>
       + trailHeadBlocks: int
-      + registryAddress: Optional<str>
+      + routerAddress: Optional<str>
       + wallet: Optional<ConfigWallet>
       + snapshotSync: ConfigSnapshotSync
     }

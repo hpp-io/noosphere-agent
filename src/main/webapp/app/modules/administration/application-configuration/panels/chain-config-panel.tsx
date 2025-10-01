@@ -114,21 +114,21 @@ const ChainConfigPanel: React.FC<ChainConfigPanelProps> = ({ config, onChange, e
           </Row>
 
           <FormGroup>
-            <Label for="registryAddress">
-              <Translate contentKey="applicationConfiguration.chain.fields.registryAddress.label">Registry Address</Translate>
+            <Label for="routerAddress">
+              <Translate contentKey="applicationConfiguration.chain.fields.routerAddress.label">Router Address</Translate>
             </Label>
             <Input
               type="text"
-              name="registryAddress"
-              id="registryAddress"
-              value={config.chain?.registryAddress || ''}
-              onChange={e => handleChainChange('registryAddress', e.target.value)}
-              invalid={!!errors.chain?.registryAddress}
+              name="routerAddress"
+              id="routerAddress"
+              value={config.chain?.routerAddress || ''}
+              onChange={e => handleChainChange('routerAddress', e.target.value)}
+              invalid={!!errors.chain?.routerAddress}
             />
             <FormText color="muted">
-              <Translate contentKey="applicationConfiguration.chain.fields.registryAddress.help">Smart contract registry address</Translate>
+              <Translate contentKey="applicationConfiguration.chain.fields.routerAddress.help">Smart contract router address</Translate>
             </FormText>
-            {errors.chain?.registryAddress && <FormText color="danger">{errors.chain.registryAddress}</FormText>}
+            {errors.chain?.routerAddress && <FormText color="danger">{errors.chain.routerAddress}</FormText>}
           </FormGroup>
         </CardBody>
       </Card>

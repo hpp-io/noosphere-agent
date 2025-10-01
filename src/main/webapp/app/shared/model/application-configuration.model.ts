@@ -23,7 +23,7 @@ export interface Chain {
   enabled: boolean;
   rpcUrl: string;
   trailHeadBlocks: number;
-  registryAddress?: string;
+  routerAddress?: string;
   wallet?: Wallet;
   snapshotSync: SnapshotSync;
 }

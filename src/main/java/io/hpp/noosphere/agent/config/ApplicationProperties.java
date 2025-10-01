@@ -231,7 +231,7 @@ public class ApplicationProperties {
         @NotNull
         private Integer trailHeadBlocks = 10;
 
-        private String registryAddress;
+        private String routerAddress;
 
         @Valid
         @NestedConfigurationProperty
@@ -241,6 +241,26 @@ public class ApplicationProperties {
         @NotNull
         @NestedConfigurationProperty
         private SnapshotSync snapshotSync = new SnapshotSync();
+
+        private ConnectionConfig connection = new ConnectionConfig();
+
+        private GasConfig gasConfig = new GasConfig();
+
+        public GasConfig getGasConfig() {
+            return gasConfig;
+        }
+
+        public void setGasConfig(GasConfig gasConfig) {
+            this.gasConfig = gasConfig;
+        }
+
+        public ConnectionConfig getConnection() {
+            return connection;
+        }
+
+        public void setConnection(ConnectionConfig connection) {
+            this.connection = connection;
+        }
 
         public Boolean getEnabled() {
             return enabled;
@@ -266,12 +286,12 @@ public class ApplicationProperties {
             this.trailHeadBlocks = trailHeadBlocks;
         }
 
-        public String getRegistryAddress() {
-            return registryAddress;
+        public String getRouterAddress() {
+            return routerAddress;
         }
 
-        public void setRegistryAddress(String registryAddress) {
-            this.registryAddress = registryAddress;
+        public void setRouterAddress(String routerAddress) {
+            this.routerAddress = routerAddress;
         }
 
         public Wallet getWallet() {
@@ -375,6 +395,61 @@ public class ApplicationProperties {
 
         public void setSyncPeriod(Double syncPeriod) {
             this.syncPeriod = syncPeriod;
+        }
+    }
+
+    @Validated
+    public static class ConnectionConfig {
+
+        private Integer timeout;
+        private Integer readTimeout;
+        private Integer writeTimeout;
+
+        public Integer getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(Integer timeout) {
+            this.timeout = timeout;
+        }
+
+        public Integer getReadTimeout() {
+            return readTimeout;
+        }
+
+        public void setReadTimeout(Integer readTimeout) {
+            this.readTimeout = readTimeout;
+        }
+
+        public Integer getWriteTimeout() {
+            return writeTimeout;
+        }
+
+        public void setWriteTimeout(Integer writeTimeout) {
+            this.writeTimeout = writeTimeout;
+        }
+    }
+
+    @Validated
+    public static class GasConfig {
+
+        private Double priceMultiplier;
+        private Double limitMultiplier;
+
+        public Double getPriceMultiplier() {
+            return priceMultiplier;
+        }
+
+        public void setPriceMultiplier(Double priceMultiplier) {
+            this.priceMultiplier = priceMultiplier;
+        }
+
+        public Double getLimitMultiplier() {
+            return limitMultiplier;
+        }
+
+        public void setLimitMultiplier(Double limitMultiplier) {
+            this.limitMultiplier = limitMultiplier;
         }
     }
 

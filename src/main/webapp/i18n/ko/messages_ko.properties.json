@@ -21,7 +21,7 @@
           "help": "블록체인 통합 활성화",
           "label": "블록체인 활성화"
         },
-        "registryAddress": {
+        "routerAddress": {
           "help": "스마트 계약 레지스트리 주소",
           "label": "레지스트리 주소"
         },

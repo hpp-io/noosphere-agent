@@ -21,7 +21,7 @@
           "help": "ブロックチェーン統合を有効にする",
           "label": "ブロックチェーンを有効化"
         },
-        "registryAddress": {
+        "routerAddress": {
           "help": "スマートコントラクトレジストリアドレス",
           "label": "レジストリアドレス"
         },
