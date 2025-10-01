@@ -21,7 +21,7 @@
           "help": "启用区块链集成",
           "label": "启用区块链"
         },
-        "registryAddress": {
+        "routerAddress": {
           "help": "智能合约注册表地址",
           "label": "注册表地址"
         },

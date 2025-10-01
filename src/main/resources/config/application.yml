@@ -251,7 +251,7 @@ application:
       enabled: true
       rpcUrl: 'http://localhost:8545'
       trailHeadBlocks: 10
-      registryAddress: '${REGISTRY_ADDRESS:}'
+      routerAddress: '${REGISTRY_ADDRESS:}'
       wallet:
         maxGasLimit: 1000000
         privateKey: '${WALLET_PRIVATE_KEY:}'

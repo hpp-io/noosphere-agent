@@ -119,7 +119,7 @@ application:
 
     # 개발 환경 블록체인 설정
     chain:
-      registryAddress: '0x1234567890123456789012345678901234567890'
+      routerAddress: '0x1234567890123456789012345678901234567890'
       wallet:
         privateKey: '${WALLET_PRIVATE_KEY:dev-private-key}'
         paymentAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'

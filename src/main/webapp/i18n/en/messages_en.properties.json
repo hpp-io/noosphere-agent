@@ -21,9 +21,9 @@
           "help": "Enable blockchain integration",
           "label": "Enable Blockchain"
         },
-        "registryAddress": {
-          "help": "Smart contract registry address",
-          "label": "Registry Address"
+        "routerAddress": {
+          "help": "Smart contract router address",
+          "label": "Router Address"
         },
         "rpcUrl": {
           "help": "Blockchain RPC endpoint URL",

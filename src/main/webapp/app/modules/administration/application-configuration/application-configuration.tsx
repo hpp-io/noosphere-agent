@@ -35,7 +35,7 @@ export const ApplicationConfiguration = () => {
       enabled: true,
       rpcUrl: 'http://localhost:8545',
       trailHeadBlocks: 10,
-      registryAddress: '',
+      routerAddress: '',
       wallet: {
         maxGasLimit: 1000000,
         privateKey: '',
@@ -92,7 +92,7 @@ export const ApplicationConfiguration = () => {
             enabled: true,
             rpcUrl: 'http://localhost:8545',
             trailHeadBlocks: 10,
-            registryAddress: '',
+            routerAddress: '',
             wallet: {
               maxGasLimit: 1000000,
               privateKey: '',

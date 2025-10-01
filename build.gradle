@@ -181,6 +181,11 @@ dependencies {
     implementation 'com.github.docker-java:docker-java:3.6.0'
     implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.6.0'
 
+    // Web3j dependencies
+    implementation 'org.web3j:core:4.10.3'
+    implementation 'org.web3j:crypto:4.10.3'
+
+
 }
 
 task cleanResources(type: Delete) {
