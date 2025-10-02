@@ -38,7 +38,7 @@ public class ContainerManagerService {
     private List<ApplicationProperties.NoosphereContainer> configs;
     private ApplicationProperties.Docker credentials;
 
-    // 동적 포트 매핑을 위한 맵들
+    // Maps for dynamic port mapping
     private final Map<String, Integer> portMappings = new ConcurrentHashMap<>();
     private final Map<String, String> urlMappings = new ConcurrentHashMap<>();
     private final Map<String, String> bearerMappings = new ConcurrentHashMap<>();
@@ -70,7 +70,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * Docker 클라이언트 초기화 - 여러 방법을 시도하여 연결
+     * Initialize Docker client - tries multiple methods to connect
      */
     private DockerClient initializeDockerClient() {
         List<String> dockerHosts = getDockerHostCandidates();
@@ -98,7 +98,7 @@ public class ContainerManagerService {
 
                 DockerClient client = DockerClientBuilder.getInstance(config).withDockerHttpClient(httpClient).build();
 
-                // 연결 테스트
+                // Connection test
                 client.versionCmd().exec();
                 log.info("Successfully connected to Docker at: {}", dockerHost);
                 return client;
@@ -113,7 +113,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 운영체제별 Docker 호스트 후보 목록을 생성합니다
+     * Generate Docker host candidates by operating system
      */
     private List<String> getDockerHostCandidates() {
         List<String> candidates = new ArrayList<>();
@@ -142,7 +142,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * TCP 포트 접근성을 확인합니다
+     * Check TCP port accessibility
      */
     private boolean isPortAccessible(String dockerHost) {
         if (!dockerHost.startsWith("tcp://")) return true;
@@ -162,7 +162,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 상세한 오류 메시지를 생성합니다
+     * Build detailed error message
      */
     private String buildDetailedErrorMessage(Exception lastException) {
         StringBuilder message = new StringBuilder();
@@ -177,7 +177,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 설정 추가
+     * Add container configuration
      */
     public void addConfig(ApplicationProperties.NoosphereContainer config) {
         if (configs == null) {
@@ -192,14 +192,14 @@ public class ContainerManagerService {
     }
 
     /**
-     * 포트 매핑 반환
+     * Return port mappings
      */
     public Map<String, Integer> getPortMappings() {
         return new HashMap<>(portMappings);
     }
 
     /**
-     * 컨테이너 포트 조회 (동적 매핑된 포트)
+     * Get container port (dynamically mapped port)
      */
     public Integer getPort(String containerId) {
         Integer dynamicPort = portMappings.get(containerId);
@@ -208,7 +208,7 @@ public class ContainerManagerService {
             return dynamicPort;
         }
 
-        // 설정에서 기본 포트 조회
+        // Get default port from configuration
         return configs
             .stream()
             .filter(config -> config.getId().equals(containerId))
@@ -218,7 +218,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 URL 조회
+     * Get container URL
      */
     public String getUrl(String containerId) {
         String dynamicUrl = urlMappings.get(containerId);
@@ -226,7 +226,7 @@ public class ContainerManagerService {
             return dynamicUrl;
         }
 
-        // 설정에서 기본 URL 조회
+        // Get default URL from configuration
         return configs
             .stream()
             .filter(config -> config.getId().equals(containerId))
@@ -236,7 +236,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 Bearer 토큰 조회
+     * Get container Bearer token
      */
     public String getBearer(String containerId) {
         String dynamicBearer = bearerMappings.get(containerId);
@@ -244,7 +244,7 @@ public class ContainerManagerService {
             return dynamicBearer;
         }
 
-        // 설정에서 기본 Bearer 조회
+        // Get default Bearer from configuration
         return configs
             .stream()
             .filter(config -> config.getId().equals(containerId))
@@ -254,7 +254,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 설정 및 실행
+     * Container setup and execution
      */
     @Async
     public CompletableFuture<Void> setup() {
@@ -269,7 +269,7 @@ public class ContainerManagerService {
             pruneContainers();
             runContainers();
 
-            // 시작 대기
+            // Wait for startup
             Thread.sleep((long) (startupWait * 1000));
             log.info("Container setup completed");
 
@@ -281,7 +281,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 무한 실행 (헬스체크 및 모니터링)
+     * Run forever (health check and monitoring)
      */
     @Scheduled(fixedDelay = 30000)
     public void runForever() {
@@ -304,7 +304,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 중지
+     * Stop containers
      */
     @PreDestroy
     public void stop() {
@@ -325,7 +325,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 리소스 정리
+     * Resource cleanup
      */
     public void cleanup() {
         if (dockerClient != null) {
@@ -339,7 +339,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 이미지 Pull
+     * Pull images
      */
     private void pullImages() {
         for (ApplicationProperties.NoosphereContainer config : configs) {
@@ -359,7 +359,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 기존 컨테이너 정리
+     * Clean up existing containers
      */
     private void pruneContainers() {
         for (ApplicationProperties.NoosphereContainer config : configs) {
@@ -382,7 +382,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 실행
+     * Run containers
      */
     private void runContainers() {
         for (ApplicationProperties.NoosphereContainer config : configs) {
@@ -395,24 +395,24 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 생성 및 시작 (동적 포트 매핑 적용)
+     * Create and start container (apply dynamic port mapping)
      */
     private void createAndStartContainer(ApplicationProperties.NoosphereContainer config) {
         String containerName = "noosphere-" + config.getId();
 
         try {
-            // 포트 바인딩 설정 (동적 할당)
+            // Configure port binding (dynamic allocation)
             List<ExposedPort> exposedPorts = new ArrayList<>();
             Ports portBindings = new Ports();
 
             if (config.getPort() != null) {
                 ExposedPort exposedPort = ExposedPort.tcp(config.getPort());
                 exposedPorts.add(exposedPort);
-                // 호스트 포트를 null로 설정하면 Docker가 자동으로 사용 가능한 포트 할당
+                // Setting host port to null allows Docker to automatically allocate available port
                 portBindings.bind(exposedPort, Ports.Binding.empty());
             }
 
-            // 환경 변수 설정
+            // Configure environment variables
             List<String> envList = config
                 .getEnv()
                 .entrySet()
@@ -420,7 +420,7 @@ public class ContainerManagerService {
                 .map(entry -> entry.getKey() + "=" + entry.getValue())
                 .collect(Collectors.toList());
 
-            // 볼륨 바인딩 설정
+            // Configure volume bindings
             List<Bind> binds = config
                 .getVolumes()
                 .stream()
@@ -430,7 +430,7 @@ public class ContainerManagerService {
                 })
                 .collect(Collectors.toList());
 
-            // 컨테이너 생성
+            // Create container
             CreateContainerResponse container = dockerClient
                 .createContainerCmd(config.getImage())
                 .withName(containerName)
@@ -441,17 +441,17 @@ public class ContainerManagerService {
                 .withCmd(config.getCommand() != null ? config.getCommand().split(" ") : null)
                 .exec();
 
-            // 컨테이너 시작
+            // Start container
             dockerClient.startContainerCmd(container.getId()).exec();
             log.info("Started container: {} ({})", containerName, container.getId());
 
-            // 컨테이너 정보 저장
+            // Save container information
             containers.put(config.getId(), containerName);
 
-            // 동적으로 할당된 포트 정보 가져오기
+            // Get dynamically allocated port information
             updateDynamicPortMappings(config, container.getId());
 
-            // 컨테이너 상태 검증
+            // Validate container state
             validateContainerHealth(containerName);
         } catch (DockerException e) {
             log.error("Docker error creating container {}: {}", containerName, e.getMessage(), e);
@@ -463,7 +463,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 동적 포트 매핑 정보 업데이트
+     * Update dynamic port mapping information
      */
     private void updateDynamicPortMappings(ApplicationProperties.NoosphereContainer config, String containerId) {
         try {
@@ -477,21 +477,21 @@ public class ContainerManagerService {
                         Ports.Binding binding = entry.getValue()[0];
                         Integer hostPort = Integer.valueOf(binding.getHostPortSpec());
 
-                        // 동적 포트 매핑 저장
+                        // Save dynamic port mapping
                         portMappings.put(config.getId(), hostPort);
 
-                        // URL 매핑 업데이트
+                        // Update URL mapping
                         String dynamicUrl = String.format("http://localhost:%d", hostPort);
                         urlMappings.put(config.getId(), dynamicUrl);
 
-                        // Bearer 토큰이 있으면 매핑에 추가
+                        // Add to mapping if bearer token exists
                         if (config.getBearer() != null && !config.getBearer().isEmpty()) {
                             bearerMappings.put(config.getId(), config.getBearer());
                         }
 
                         log.info("Dynamic port mapping for container {}: {} -> {}", config.getId(), entry.getKey().getPort(), hostPort);
 
-                        break; // 첫 번째 포트 매핑만 사용
+                        break; // Use only the first port mapping
                     }
                 }
             }
@@ -501,11 +501,11 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 상태 검증
+     * Validate container state
      */
     private void validateContainerHealth(String containerName) {
         try {
-            // 컨테이너가 실행 중인지 확인
+            // Check if container is running
             List<Container> runningContainers = dockerClient
                 .listContainersCmd()
                 .withNameFilter(Collections.singleton(containerName))
@@ -528,7 +528,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 실행 중인 컨테이너 정보
+     * Running container information
      */
     public Map<String, String> getRunningContainerInfo() {
         Map<String, String> info = new HashMap<>();
@@ -563,7 +563,7 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 재시작
+     * Restart container
      */
     private void restartContainer(ApplicationProperties.NoosphereContainer config) {
         String containerName = "noosphere-" + config.getId();
@@ -571,7 +571,7 @@ public class ContainerManagerService {
         try {
             log.info("Restarting container: {}", containerName);
 
-            // 기존 컨테이너 중지 및 제거
+            // Stop and remove existing container
             List<Container> existingContainers = dockerClient
                 .listContainersCmd()
                 .withShowAll(true)
@@ -583,12 +583,12 @@ public class ContainerManagerService {
                 log.info("Removed existing container: {}", containerName);
             }
 
-            // 포트 매핑 정리
+            // Clean up port mappings
             portMappings.remove(config.getId());
             urlMappings.remove(config.getId());
             bearerMappings.remove(config.getId());
 
-            // 새 컨테이너 생성 및 시작
+            // Create and start new container
             createAndStartContainer(config);
 
             log.info("Successfully restarted container: {}", containerName);
@@ -598,14 +598,14 @@ public class ContainerManagerService {
     }
 
     /**
-     * 컨테이너 강제 재생성 (기존 컨테이너 제거 후 새로 생성)
+     * Force recreate container (remove existing container and create new one)
      */
     private void recreateContainer(ApplicationProperties.NoosphereContainer config) {
-        restartContainer(config); // 현재는 재시작과 동일한 로직 사용
+        restartContainer(config); // Currently uses the same logic as restart
     }
 
     /**
-     * 컨테이너 상태 확인 및 복구
+     * Check container state and recover
      */
     private boolean isContainerHealthy(String containerName) {
         try {
