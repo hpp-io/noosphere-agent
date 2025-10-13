@@ -29,7 +29,7 @@ public class DelegateeCoordinatorService {
     public void init() {
         try {
             // 1. Query the address of the "DelegateeCoordinator" contract through the Router service.
-            String contractAddress = web3RouterService.getContractAddress("DelegateeCoordinator").join();
+            String contractAddress = web3RouterService.getCachedContractAddress("Coordinator_v1.0.0");
 
             if (
                 contractAddress == null || contractAddress.isEmpty() || contractAddress.equals("0x0000000000000000000000000000000000000000")

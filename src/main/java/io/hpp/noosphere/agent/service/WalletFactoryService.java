@@ -30,7 +30,7 @@ public class WalletFactoryService {
     public void init() {
         try {
             // 1. Query the address of the "WalletFactory" contract through the Router service.
-            String contractAddress = web3RouterService.getContractAddress("WalletFactory").join();
+            String contractAddress = web3RouterService.getCachedContractAddress("WalletFactory");
 
             if (
                 contractAddress == null || contractAddress.isEmpty() || contractAddress.equals("0x0000000000000000000000000000000000000000")
@@ -62,5 +62,21 @@ public class WalletFactoryService {
         log.info("Creating a new wallet for owner: {}", initialOwner);
         // 3. Call the smart contract function using the loaded contract object.
         return walletFactoryContract.createWallet(initialOwner).sendAsync();
+    }
+
+    public Boolean isValid(String walletAddress) throws Exception {
+        if (walletFactoryContract == null) {
+            log.error("WalletFactory contract is not loaded.");
+            throw new IllegalStateException("WalletFactory contract not initialized.");
+        }
+
+        log.info("Creating a new wallet for owner: {}", walletAddress);
+        // 3. Call the smart contract function using the loaded contract object.
+        try {
+            return walletFactoryContract.isValidWallet(walletAddress).send();
+        } catch (Exception e) {
+            log.error("Failed to is valid wallet: {}", walletAddress, e);
+            throw new RuntimeException("Failed to is valid wallet", e);
+        }
     }
 }

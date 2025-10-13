@@ -29,15 +29,7 @@ public class CoordinatorService {
     public void init() {
         try {
             // 1. Query the address of the "Coordinator" contract asynchronously through the Router service.
-            String coordinatorAddress = web3RouterService.getContractAddress("Coordinator").join();
-
-            if (
-                coordinatorAddress == null ||
-                coordinatorAddress.isEmpty() ||
-                coordinatorAddress.equals("0x0000000000000000000000000000000000000000")
-            ) {
-                throw new IllegalStateException("Coordinator contract address not found via Router.");
-            }
+            String coordinatorAddress = web3RouterService.getCachedContractAddress("Coordinator_v1.0.0");
 
             // 2. Load the Coordinator contract's Web3j wrapper using the retrieved address.
             this.coordinatorContract = Coordinator.load(coordinatorAddress, web3j, credentials, gasProvider);

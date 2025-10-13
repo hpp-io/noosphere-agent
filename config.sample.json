@@ -1,0 +1,59 @@
+{
+  "forwardStats": true,
+  "manageContainers": true,
+  "startupWait": 5.0,
+  "server": {
+    "port": 8080,
+    "rateLimit": {
+      "numRequests": 100,
+      "period": 60
+    }
+  },
+  "chain": {
+    "enabled": true,
+    "rpcUrl": "http://localhost:8545",
+    "trailHeadBlocks": 10,
+    "routerAddress": "",
+    "wallet": {
+      "maxGasLimit": 1000000,
+      "privateKey": "",
+      "paymentAddress": "",
+      "allowedSimErrors": ["execution reverted", "out of gas"]
+    },
+    "snapshotSync": {
+      "sleep": 1.0,
+      "batchSize": 100,
+      "startingSubId": 0,
+      "syncPeriod": 300.0
+    },
+    "connection": {
+      "timeout": 30000,
+      "readTimeout": 60000,
+      "writeTimeout": 60000
+    },
+    "gasConfig": {
+      "priceMultiplier": 1.2,
+      "limitMultiplier": 1.3
+    }
+  },
+  "docker": {
+    "username": "your-docker-username",
+    "password": "your-docker-password"
+  },
+  "containers": [
+    {
+      "id": "",
+      "image": "",
+      "external": true,
+      "port": "",
+      "allowedDelegateAddresses": [],
+      "allowedAddresses": [],
+      "allowedIps": [],
+      "command": "",
+      "env": {},
+      "volumes": [],
+      "acceptedPayments": {},
+      "generatesProofs": false
+    }
+  ]
+}

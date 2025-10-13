@@ -98,40 +98,39 @@ public class Web3RouterService {
     /**
      * Get addresses of contracts predefined in NoosphereConfig
      */
-    public CompletableFuture<Map<String, String>> getConfiguredContractAddresses() {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                Map<String, String> addresses = new HashMap<>();
-                ApplicationProperties.Chain chainConfig = noosphereConfigService.getActiveConfig().getChain();
+    public Map<String, String> getConfiguredContractAddresses() {
+        // Query dynamically registered contracts through Router
+        String[] knownContracts = getKnownContractNames();
+        for (String contractName : knownContracts) {
+            if (!contractAddresses.containsKey(contractName)) {
+                try {
+                    // Convert string to 32-byte array
+                    byte[] contractNameBytes = contractName.getBytes();
+                    byte[] paddedBytes = new byte[32];
+                    System.arraycopy(contractNameBytes, 0, paddedBytes, 0, Math.min(contractNameBytes.length, 32));
 
-                // Query dynamically registered contracts through Router
-                String[] knownContracts = getKnownContractNames();
-                for (String contractName : knownContracts) {
-                    if (!addresses.containsKey(contractName)) {
-                        try {
-                            // Convert string to 32-byte array
-                            byte[] contractNameBytes = contractName.getBytes();
-                            byte[] paddedBytes = new byte[32];
-                            System.arraycopy(contractNameBytes, 0, paddedBytes, 0, Math.min(contractNameBytes.length, 32));
-
-                            String address = routerContract.getContractById(paddedBytes).send();
-                            if (address != null && !address.equals("0x0000000000000000000000000000000000000000")) {
-                                addresses.put(contractName, address);
-                                contractAddresses.put(contractName, address); // Also store in cache
-                            }
-                        } catch (Exception e) {
-                            log.debug("Contract {} not found in router", contractName);
-                        }
+                    String address = routerContract.getContractById(paddedBytes).send();
+                    if (address != null && !address.equals("0x0000000000000000000000000000000000000000")) {
+                        contractAddresses.put(contractName, address); // Also store in cache
                     }
+                } catch (Exception e) {
+                    log.debug("Contract {} not found in router", contractName);
                 }
-
-                log.info("Retrieved {} contract addresses", addresses.size());
-                return addresses;
-            } catch (Exception e) {
-                log.error("Failed to get configured contract addresses", e);
-                throw new RuntimeException("Failed to get configured contract addresses", e);
             }
-        });
+        }
+
+        //Query wallet factory address
+        try {
+            String walletFactoryAddress = routerContract.getWalletFactory().send();
+            if (walletFactoryAddress != null && !walletFactoryAddress.equals("0x0000000000000000000000000000000000000000")) {
+                contractAddresses.put("WalletFactory", walletFactoryAddress);
+            }
+        } catch (Exception e) {
+            log.debug("Contract WalletFactory not found in router");
+        }
+
+        log.info("Retrieved {} contract addresses", contractAddresses.size());
+        return contractAddresses;
     }
 
     /**
@@ -172,40 +171,17 @@ public class Web3RouterService {
      * Load contract addresses during initialization
      */
     private void loadContractAddresses() {
-        CompletableFuture.runAsync(() -> {
-            try {
-                // First load statically defined contracts from configuration file
-                ApplicationProperties.Chain chainConfig = noosphereConfigService.getActiveConfig().getChain();
+        try {
+            // First load statically defined contracts from configuration file
+            ApplicationProperties.Chain chainConfig = noosphereConfigService.getActiveConfig().getChain();
 
-                if (chainConfig.getRouterAddress() != null && !chainConfig.getRouterAddress().isEmpty()) {
-                    contractAddresses.put("Router", chainConfig.getRouterAddress());
-                }
-
-                // Load dynamic contracts through Router
-                String[] knownContracts = getKnownContractNames();
-
-                for (String contractName : knownContracts) {
-                    if (!contractAddresses.containsKey(contractName)) {
-                        try {
-                            // Convert string to 32-byte array
-                            byte[] contractNameBytes = contractName.getBytes();
-                            byte[] paddedBytes = new byte[32];
-                            System.arraycopy(contractNameBytes, 0, paddedBytes, 0, Math.min(contractNameBytes.length, 32));
-
-                            String address = routerContract.getContractById(paddedBytes).send();
-                            if (address != null && !address.equals("0x0000000000000000000000000000000000000000")) {
-                                contractAddresses.put(contractName, address);
-                                log.debug("Cached address for {}: {}", contractName, address);
-                            }
-                        } catch (Exception e) {
-                            log.debug("Contract {} not found in router", contractName);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Failed to load contract addresses during initialization", e);
+            if (chainConfig.getRouterAddress() != null && !chainConfig.getRouterAddress().isEmpty()) {
+                contractAddresses.put("Router", chainConfig.getRouterAddress());
             }
-        });
+            this.getConfiguredContractAddresses();
+        } catch (Exception e) {
+            log.error("Failed to load contract addresses during initialization", e);
+        }
     }
 
     /**
@@ -214,7 +190,7 @@ public class Web3RouterService {
      */
     private String[] getKnownContractNames() {
         // This part can be extended to be configurable from NoosphereConfig
-        return new String[] { "Coordinator_v1.0.0", "DelegateeCoordinator", "Router", "Wallet", "WalletFactory" };
+        return new String[] { "Coordinator_v1.0.0" };
     }
 
     /**
