@@ -1,6 +1,37 @@
-# noosphereAgent
+# NoosphereAgent
 
-This application was generated using JHipster 8.11.0, you can find documentation and help at [https://www.jhipster.tech/documentation-archive/v8.11.0](https://www.jhipster.tech/documentation-archive/v8.11.0).
+Noosphere Agent is a Java-based agent that interacts with Web3 smart contracts to perform decentralized off-chain computations. This agent listens for blockchain events, executes the requested computation tasks in Docker containers, and sends the results back to the smart contract or a Noosphere Hub.
+
+## Key Features
+
+- **Blockchain Integration**: Listens to real-time events from a smart contract (Router) and submits computation results as transactions.
+- **Dynamic Container Management**: Automatically manages the lifecycle of Docker containers defined in `config.json` (image pull, creation, execution, health checks, and restarts).
+- **Computation Orchestration**: Can chain multiple containers together to perform sequential computation tasks.
+- **Versatile Request Handling**: Processes various types of computation requests, including on-chain (from smart contracts), off-chain (via HTTP API), and delegated requests.
+- **Hub Integration**: Registers itself with the Noosphere Hub, periodically reports its status, and can execute delegated tasks assigned by the Hub.
+
+## Prerequisites
+
+The following are required for development and execution:
+
+- Java 17+
+- Docker
+- Node.js (for frontend development)
+- A local blockchain testing environment (e.g., anvil)
+
+## Configuration
+
+The agent's primary configuration is managed through the `src/main/resources/config.json` file. The path to this file is specified in `application.yml` under the `application.noosphere.configFilePath` property.
+
+Key configuration sections in `config.json` include:
+
+- `chain`: Blockchain network information (RPC URL, Router contract address, wallet private key, etc.).
+- `docker`: Docker Registry authentication credentials (Username, Password).
+- `containers`: A list of Computation containers to be managed by the agent (image, port, environment variables, access control rules, etc.).
+
+### Environment Variables
+
+Sensitive information must be injected via environment variables.
 
 ## Project Structure
 
@@ -8,16 +39,7 @@ Node is required for generation and recommended for development. `package.json` 
 
 In the project root, JHipster generates configuration files for tools like git, prettier, eslint, husky, and others that are well known and you can find references in the web.
 
-`/src/*` structure follows default Java structure.
-
-- `.yo-rc.json` - Yeoman configuration file
-  JHipster configuration is stored in this file at `generator-jhipster` key. You may find `generator-jhipster-*` for specific blueprints configuration.
-- `.yo-resolve` (optional) - Yeoman conflict resolver
-  Allows to use a specific action when conflicts are found skipping prompts for files that matches a pattern. Each line should match `[pattern] [action]` with pattern been a [Minimatch](https://github.com/isaacs/minimatch#minimatch) pattern and action been one of skip (default if omitted) or force. Lines starting with `#` are considered comments and are ignored.
-- `.jhipster/*.json` - JHipster entity configuration files
-
-- `npmw` - wrapper to use locally installed npm.
-  JHipster installs Node and npm locally using the build tool by default. This wrapper makes sure npm is installed locally and uses it avoiding some differences different versions can cause. By using `./npmw` instead of the traditional `npm` you can configure a Node-less environment to develop or test your application.
+- `/src/*` structure follows default Java structure.
 - `/src/main/docker` - Docker configurations for the application and services that the application depends on
 
 ## Development
@@ -54,42 +76,13 @@ Add the `help` flag on any command to see how you can use it. For example, `./np
 
 The `./npmw run` command will list all the scripts available to run for this project.
 
-### PWA Support
+### Generating Web3j Wrappers
 
-JHipster ships with PWA (Progressive Web App) support, and it's turned off by default. One of the main components of a PWA is a service worker.
+To interact with smart contracts, you need to generate Java wrapper classes. Use the `generateWeb3jWrappers` task in `build.gradle`.
 
-The service worker initialization code is commented out by default. To enable it, uncomment the following code in `src/main/webapp/index.html`:
-
-```html
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').then(function () {
-      console.log('Service Worker Registered');
-    });
-  }
-</script>
-```
-
-Note: [Workbox](https://developers.google.com/web/tools/workbox/) powers JHipster's service worker. It dynamically generates the `service-worker.js` file.
-
-### Managing dependencies
-
-For example, to add [Leaflet][] library as a runtime dependency of your application, you would run following command:
-
-```
-./npmw install --save --save-exact leaflet
-```
-
-To benefit from TypeScript type definitions from [DefinitelyTyped][] repository in development, you would run following command:
-
-```
-./npmw install --save-dev --save-exact @types/leaflet
-```
-
-Then you would import the JS and CSS files specified in library's installation instructions so that [Webpack][] knows about them:
-Note: There are still a few other things remaining to do for Leaflet that we won't detail here.
-
-For further instructions on how to develop with JHipster, have a look at [Using JHipster in development][].
+1.  Ensure your compiled contract artifacts (`.json`) are present in the `./contract/out` directory (e.g., by running `forge build`).
+2.  Add the names of the contracts you want to generate to the `selectedContracts` list in `build.gradle`.
+3.  Run the following command:
 
 ## Building for production
 
@@ -118,14 +111,6 @@ To package your application as a war in order to deploy it to an application ser
 
 ```
 ./gradlew -Pprod -Pwar clean bootWar
-```
-
-### JHipster Control Center
-
-JHipster Control Center can help you manage and control your application(s). You can start a local control center server (accessible on http://localhost:7419) with:
-
-```
-docker compose -f src/main/docker/jhipster-control-center.yml up
 ```
 
 ## Testing
@@ -238,27 +223,3 @@ Then run:
 ```sh
 docker compose -f src/main/docker/app.yml up -d
 ```
-
-For more information refer to [Using Docker and Docker-Compose][], this page also contains information on the Docker Compose sub-generator (`jhipster docker-compose`), which is able to generate Docker configurations for one or several JHipster applications.
-
-## Continuous Integration (optional)
-
-To configure CI for your project, run the ci-cd sub-generator (`jhipster ci-cd`), this will let you generate configuration files for a number of Continuous Integration systems. Consult the [Setting up Continuous Integration][] page for more information.
-
-[JHipster Homepage and latest documentation]: https://www.jhipster.tech
-[JHipster 8.11.0 archive]: https://www.jhipster.tech/documentation-archive/v8.11.0
-[Using JHipster in development]: https://www.jhipster.tech/documentation-archive/v8.11.0/development/
-[Using Docker and Docker-Compose]: https://www.jhipster.tech/documentation-archive/v8.11.0/docker-compose
-[Using JHipster in production]: https://www.jhipster.tech/documentation-archive/v8.11.0/production/
-[Running tests page]: https://www.jhipster.tech/documentation-archive/v8.11.0/running-tests/
-[Code quality page]: https://www.jhipster.tech/documentation-archive/v8.11.0/code-quality/
-[Setting up Continuous Integration]: https://www.jhipster.tech/documentation-archive/v8.11.0/setting-up-ci/
-[Node.js]: https://nodejs.org/
-[NPM]: https://www.npmjs.com/
-[Gatling]: https://gatling.io/
-[Webpack]: https://webpack.github.io/
-[BrowserSync]: https://www.browsersync.io/
-[Jest]: https://jestjs.io
-[Cypress]: https://www.cypress.io/
-[Leaflet]: https://leafletjs.com/
-[DefinitelyTyped]: https://definitelytyped.org/
