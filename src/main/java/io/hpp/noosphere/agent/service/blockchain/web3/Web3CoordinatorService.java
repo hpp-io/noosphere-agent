@@ -1,4 +1,4 @@
-package io.hpp.noosphere.agent.service;
+package io.hpp.noosphere.agent.service.blockchain.web3;
 
 import io.hpp.noosphere.agent.config.Web3jConfig;
 import io.hpp.noosphere.agent.contracts.Coordinator;
@@ -13,7 +13,7 @@ import org.web3j.protocol.Web3j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CoordinatorService {
+public class Web3CoordinatorService {
 
     private final Web3RouterService web3RouterService;
     private final Web3j web3j;

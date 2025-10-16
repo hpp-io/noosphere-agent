@@ -197,7 +197,8 @@ ext {
         'Coordinator',
         'DelegateeCoordinator',
         'WalletFactory',
-        'Wallet'
+        'Wallet',
+        'SubscriptionBatchReader'
         // 필요한 컨트랙트만 추가
     ]
 

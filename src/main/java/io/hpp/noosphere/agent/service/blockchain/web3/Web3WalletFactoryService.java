@@ -1,4 +1,4 @@
-package io.hpp.noosphere.agent.service;
+package io.hpp.noosphere.agent.service.blockchain.web3;
 
 import io.hpp.noosphere.agent.config.Web3jConfig;
 import io.hpp.noosphere.agent.contracts.WalletFactory;
@@ -14,7 +14,7 @@ import org.web3j.protocol.core.methods.response.TransactionReceipt;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class WalletFactoryService {
+public class Web3WalletFactoryService {
 
     private final Web3RouterService web3RouterService;
     private final Web3j web3j;

@@ -1,17 +1,25 @@
-package io.hpp.noosphere.agent.service;
+package io.hpp.noosphere.agent.service.blockchain.web3;
 
 import io.hpp.noosphere.agent.config.ApplicationProperties;
 import io.hpp.noosphere.agent.config.Web3jConfig;
 import io.hpp.noosphere.agent.contracts.Router;
+import io.hpp.noosphere.agent.service.NoosphereConfigService;
+import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
 import jakarta.annotation.PostConstruct;
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.FunctionReturnDecoder;
+import org.web3j.abi.TypeReference;
+import org.web3j.abi.datatypes.generated.Uint64;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.DefaultBlockParameter;
 
 @Slf4j
 @Service
@@ -200,6 +208,80 @@ public class Web3RouterService {
         return CompletableFuture.runAsync(() -> {
             contractAddresses.clear();
             loadContractAddresses();
+        });
+    }
+
+    /**
+     * Get the last (highest) subscription ID from the Router contract.
+     * @param blockNumber Optional block number to query from. If null, queries the latest block.
+     * @return A CompletableFuture containing the last subscription ID.
+     */
+    public CompletableFuture<BigInteger> getLastSubscriptionId(Long blockNumber) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                final org.web3j.abi.datatypes.Function function = new org.web3j.abi.datatypes.Function(
+                    Router.FUNC_GETLASTSUBSCRIPTIONID,
+                    java.util.Collections.emptyList(),
+                    java.util.Collections.singletonList(new TypeReference<Uint64>() {})
+                );
+                String encodedFunction = FunctionEncoder.encode(function);
+
+                DefaultBlockParameter blockParameter;
+                if (blockNumber != null && blockNumber > 0) {
+                    log.debug("Querying last subscription ID from router contract at block {}", blockNumber);
+                    blockParameter = DefaultBlockParameter.valueOf(BigInteger.valueOf(blockNumber));
+                } else {
+                    log.debug("Querying last subscription ID from router contract at latest block...");
+                    blockParameter = DefaultBlockParameter.valueOf("latest");
+                }
+
+                org.web3j.protocol.core.methods.request.Transaction transaction =
+                    org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction(
+                        credentials.getAddress(),
+                        routerContract.getContractAddress(),
+                        encodedFunction
+                    );
+
+                String result = web3j.ethCall(transaction, blockParameter).send().getValue();
+                BigInteger lastId = (BigInteger) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(0).getValue();
+
+                log.info("Retrieved last subscription ID: {} at block {}", lastId, blockNumber != null ? blockNumber : "latest");
+                return lastId;
+            } catch (Exception e) {
+                log.error("Failed to get last subscription ID", e);
+                throw new RuntimeException("Failed to get last subscription ID", e);
+            }
+        });
+    }
+
+    /**
+     * Get the last (highest) subscription ID from the Router contract at the latest block.
+     * @return A CompletableFuture containing the last subscription ID.
+     */
+    public CompletableFuture<BigInteger> getLastSubscriptionId() {
+        return getLastSubscriptionId(null);
+    }
+
+    /**
+     * Get a specific compute subscription by its ID.
+     * @param subscriptionId The ID of the subscription.
+     * @return A CompletableFuture containing the subscription details.
+     */
+    public CompletableFuture<Router.ComputeSubscription> getComputeSubscription(BigInteger subscriptionId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                log.debug("Querying subscription details for ID: {}", subscriptionId);
+                Router.ComputeSubscription subscription = routerContract.getComputeSubscription(subscriptionId).send();
+                if (subscription == null) {
+                    log.warn("No subscription found for ID: {}", subscriptionId);
+                    return null;
+                }
+                log.info("Retrieved subscription details for ID: {}", subscriptionId);
+                return subscription;
+            } catch (Exception e) {
+                log.error("Failed to get compute subscription for ID {}", subscriptionId, e);
+                throw new RuntimeException("Failed to get compute subscription", e);
+            }
         });
     }
 }
