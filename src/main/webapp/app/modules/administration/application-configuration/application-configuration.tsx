@@ -46,7 +46,7 @@ export const ApplicationConfiguration = () => {
         sleep: 1.0,
         batchSize: 100,
         startingSubId: 0,
-        syncPeriod: 300.0,
+        syncPeriod: 3000,
       },
     },
     docker: {
@@ -103,7 +103,7 @@ export const ApplicationConfiguration = () => {
               sleep: 1.0,
               batchSize: 100,
               startingSubId: 0,
-              syncPeriod: 300.0,
+              syncPeriod: 3000,
             },
           },
           docker: {

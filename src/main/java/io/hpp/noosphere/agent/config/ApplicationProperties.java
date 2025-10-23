@@ -229,7 +229,7 @@ public class ApplicationProperties {
         private String rpcUrl = "http://localhost:8545";
 
         @NotNull
-        private Integer trailHeadBlocks = 10;
+        private long trailHeadBlocks = 10;
 
         private String routerAddress;
 
@@ -278,7 +278,7 @@ public class ApplicationProperties {
             this.rpcUrl = rpcUrl;
         }
 
-        public Integer getTrailHeadBlocks() {
+        public Long getTrailHeadBlocks() {
             return trailHeadBlocks;
         }
 
@@ -360,16 +360,16 @@ public class ApplicationProperties {
     @Validated
     public static class SnapshotSync {
 
-        private Double sleep = 1.0;
+        private Long sleep = (long) 1.0;
         private Integer batchSize = 100;
         private Integer startingSubId = 0;
-        private Double syncPeriod = 300.0;
+        private String syncPeriod = "3000";
 
-        public Double getSleep() {
+        public Long getSleep() {
             return sleep;
         }
 
-        public void setSleep(Double sleep) {
+        public void setSleep(Long sleep) {
             this.sleep = sleep;
         }
 
@@ -389,11 +389,11 @@ public class ApplicationProperties {
             this.startingSubId = startingSubId;
         }
 
-        public Double getSyncPeriod() {
+        public String getSyncPeriod() {
             return syncPeriod;
         }
 
-        public void setSyncPeriod(Double syncPeriod) {
+        public void setSyncPeriod(String syncPeriod) {
             this.syncPeriod = syncPeriod;
         }
     }

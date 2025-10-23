@@ -1,4 +1,6 @@
-package io.hpp.noosphere.agent.service;
+package io.hpp.noosphere.agent.service.blockchain.web3;
+
+import static io.hpp.noosphere.agent.config.Constants.ZERO_ADDRESS;
 
 import io.hpp.noosphere.agent.config.Web3jConfig;
 import io.hpp.noosphere.agent.contracts.WalletFactory;
@@ -6,15 +8,17 @@ import jakarta.annotation.PostConstruct;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
-public class WalletFactoryService {
+public class Web3WalletFactoryService {
+
+    private static final Logger log = LoggerFactory.getLogger(Web3WalletFactoryService.class);
 
     private final Web3RouterService web3RouterService;
     private final Web3j web3j;
@@ -22,6 +26,18 @@ public class WalletFactoryService {
     private final Web3jConfig.CustomGasProvider gasProvider;
 
     private WalletFactory walletFactoryContract;
+
+    public Web3WalletFactoryService(
+        Web3RouterService web3RouterService,
+        Web3j web3j,
+        Credentials credentials,
+        Web3jConfig.CustomGasProvider gasProvider
+    ) {
+        this.web3RouterService = web3RouterService;
+        this.web3j = web3j;
+        this.credentials = credentials;
+        this.gasProvider = gasProvider;
+    }
 
     /**
      * Load the WalletFactory contract address through Web3RouterService during service initialization.
@@ -32,9 +48,7 @@ public class WalletFactoryService {
             // 1. Query the address of the "WalletFactory" contract through the Router service.
             String contractAddress = web3RouterService.getCachedContractAddress("WalletFactory");
 
-            if (
-                contractAddress == null || contractAddress.isEmpty() || contractAddress.equals("0x0000000000000000000000000000000000000000")
-            ) {
+            if (contractAddress == null || contractAddress.isEmpty() || contractAddress.equals(ZERO_ADDRESS)) {
                 throw new IllegalStateException("WalletFactory contract address not found via Router.");
             }
 

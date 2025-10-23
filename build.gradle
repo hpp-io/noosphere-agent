@@ -182,22 +182,24 @@ dependencies {
     implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.6.0'
 
     // Web3j dependencies
-    implementation 'org.web3j:core:4.10.3'
-    implementation 'org.web3j:crypto:4.10.3'
-    implementation 'org.web3j:contracts:4.10.3'
-    implementation 'org.web3j:utils:4.10.3'
-    implementation 'org.web3j:abi:4.10.3'
-    implementation 'org.web3j:codegen:4.10.3'
+    implementation "org.web3j:core:${web3jVersion}"
+    implementation "org.web3j:crypto:${web3jVersion}"
+    implementation "org.web3j:contracts:${web3jVersion}"
+    implementation "org.web3j:utils:${web3jVersion}"
+    implementation "org.web3j:abi:${web3jVersion}"
+    implementation "org.web3j:codegen:${web3jVersion}"
 }
 
 ext {
     // 처리할 컨트랙트 목록 (파일명 확장자 제외)
     selectedContracts = [
         'Router',
-        'Coordinator',
         'DelegateeCoordinator',
         'WalletFactory',
-        'Wallet'
+        'Wallet',
+        'SubscriptionBatchReader',
+        'TransientComputeClient',
+        'Delegator'
         // 필요한 컨트랙트만 추가
     ]
 
