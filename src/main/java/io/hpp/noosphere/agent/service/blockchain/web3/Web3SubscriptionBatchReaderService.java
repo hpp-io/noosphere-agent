@@ -1,5 +1,7 @@
 package io.hpp.noosphere.agent.service.blockchain.web3;
 
+import static io.hpp.noosphere.agent.config.Constants.ZERO_ADDRESS;
+
 import io.hpp.noosphere.agent.config.Web3jConfig;
 import io.hpp.noosphere.agent.contracts.SubscriptionBatchReader;
 import jakarta.annotation.PostConstruct;
@@ -9,24 +11,23 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.DynamicArray;
-import org.web3j.abi.datatypes.Type;
 import org.web3j.abi.datatypes.generated.Uint32;
 import org.web3j.abi.datatypes.generated.Uint64;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class Web3SubscriptionBatchReaderService {
+
+    private static final Logger log = LoggerFactory.getLogger(Web3SubscriptionBatchReaderService.class);
 
     private final Web3DelegateeCoordinatorService web3DelegateeCoordinatorService;
     private final Web3j web3j;
@@ -35,14 +36,24 @@ public class Web3SubscriptionBatchReaderService {
 
     private SubscriptionBatchReader subscriptionBatchReaderContract;
 
+    public Web3SubscriptionBatchReaderService(
+        Web3DelegateeCoordinatorService web3DelegateeCoordinatorService,
+        Web3j web3j,
+        Credentials credentials,
+        Web3jConfig.CustomGasProvider gasProvider
+    ) {
+        this.web3DelegateeCoordinatorService = web3DelegateeCoordinatorService;
+        this.web3j = web3j;
+        this.credentials = credentials;
+        this.gasProvider = gasProvider;
+    }
+
     @PostConstruct
     public void init() {
         try {
             String contractAddress = web3DelegateeCoordinatorService.getSubscriptionBatchReader().join();
 
-            if (
-                contractAddress == null || contractAddress.isEmpty() || contractAddress.equals("0x0000000000000000000000000000000000000000")
-            ) {
+            if (contractAddress == null || contractAddress.isEmpty() || contractAddress.equals(ZERO_ADDRESS)) {
                 throw new IllegalStateException("SubscriptionBatchReader contract address not found.");
             }
 

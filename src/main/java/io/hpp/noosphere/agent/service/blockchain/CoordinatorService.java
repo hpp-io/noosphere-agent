@@ -1,0 +1,226 @@
+package io.hpp.noosphere.agent.service.blockchain;
+
+import io.hpp.noosphere.agent.contracts.Router;
+import io.hpp.noosphere.agent.service.blockchain.dto.ExistingDelegateSubscription;
+import io.hpp.noosphere.agent.service.blockchain.dto.SignatureParamsDTO;
+import io.hpp.noosphere.agent.service.blockchain.dto.TxStatus;
+import io.hpp.noosphere.agent.service.blockchain.web3.Web3ClientService;
+import io.hpp.noosphere.agent.service.blockchain.web3.Web3DelegateeCoordinatorService;
+import io.hpp.noosphere.agent.service.blockchain.web3.Web3DelegatorService;
+import io.hpp.noosphere.agent.service.blockchain.web3.Web3RouterService;
+import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
+import java.math.BigInteger;
+import java.security.SignatureException;
+import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.web3j.crypto.Sign;
+import org.web3j.protocol.Web3j;
+import org.web3j.utils.Numeric;
+
+@Service
+public class CoordinatorService {
+
+    private static final Logger log = LoggerFactory.getLogger(CoordinatorService.class);
+
+    private final Web3RouterService web3RouterService;
+    private final Web3DelegatorService web3DelegatorService;
+    private final Web3DelegateeCoordinatorService web3DelegateeCoordinatorService;
+    private final Web3ClientService web3ClientService;
+    private final Web3j web3j;
+
+    public CoordinatorService(
+        Web3RouterService web3RouterService,
+        Web3DelegatorService web3DelegatorService,
+        Web3DelegateeCoordinatorService web3DelegateeCoordinatorService,
+        Web3ClientService web3ClientService,
+        Web3j web3j
+    ) {
+        this.web3RouterService = web3RouterService;
+        this.web3DelegatorService = web3DelegatorService;
+        this.web3DelegateeCoordinatorService = web3DelegateeCoordinatorService;
+        this.web3ClientService = web3ClientService;
+        this.web3j = web3j;
+    }
+
+    /**
+     * Fetches the delegated signer from a subscription consumer contract.
+     */
+    public CompletableFuture<String> getDelegatedSigner(SubscriptionDTO subscription, Long blockNumber) {
+        return web3DelegatorService.getDelegatedSigner(subscription, blockNumber);
+    }
+
+    /**
+     * Checks if a DelegateSubscription has already created an on-chain subscription.
+     */
+    public CompletableFuture<ExistingDelegateSubscription> getExistingDelegateSubscription(
+        SubscriptionDTO subscription,
+        SignatureParamsDTO signature,
+        long blockNumber
+    ) {
+        return web3RouterService
+            .getDelegateCreatedId(subscription, signature, blockNumber)
+            .thenApply(subscriptionId -> {
+                boolean exists = !subscriptionId.equals(BigInteger.ZERO);
+                return new ExistingDelegateSubscription(exists, subscriptionId.longValue());
+            });
+    }
+
+    /**
+     * Recovers the delegatee signer from a signature.
+     */
+    public CompletableFuture<String> recoverDelegateeSigner(SubscriptionDTO subscription, SignatureParamsDTO signature) {
+        return CompletableFuture.supplyAsync(() -> {
+            Sign.SignatureData signatureData = new Sign.SignatureData(
+                (byte) signature.v(),
+                Numeric.toBytesPadded(signature.r(), 32),
+                Numeric.toBytesPadded(signature.s(), 32)
+            );
+
+            // Re-create EIP-712 typed data hash
+            // This is a simplified version. A full implementation requires building the
+            // EIP712-compliant structure and hashing it.
+            // For this example, we assume a method `getTypedDataHash` exists.
+            byte[] messageHash = subscription.getTypedDataHashForDelegation(
+                signature.nonce(),
+                signature.expiry(),
+                web3RouterService.getChainId(),
+                web3RouterService.getCachedContractAddress("Coordinator_v1.0.0")
+            );
+
+            // Use signedMessageToKey for EIP-712, as it expects a pre-hashed message
+            // and correctly handles the signature data to recover the public key.
+            BigInteger recoveredKey = null;
+            try {
+                recoveredKey = Sign.signedMessageToKey(messageHash, signatureData);
+            } catch (SignatureException e) {
+                throw new RuntimeException(e);
+            }
+
+            return "0x" + org.web3j.crypto.Keys.getAddress(recoveredKey);
+        });
+    }
+
+    /**
+     * Returns the latest coordinator subscription ID.
+     */
+    public CompletableFuture<Long> getHeadSubscriptionId() {
+        return web3RouterService.getHeadSubscriptionId();
+    }
+
+    /**
+     * Returns a subscription by its ID.
+     */
+    @Cacheable(value = "subscriptions", key = "{#subscriptionId, #blockParameter.getBlockNumber()}")
+    public CompletableFuture<SubscriptionDTO> getSubscriptionById(long subscriptionId) {
+        log.debug("Fetching subscription {}", subscriptionId);
+        return web3RouterService
+            .getComputeSubscription(BigInteger.valueOf(subscriptionId))
+            .thenApply(contractSub -> {
+                SubscriptionDTO dto = convertContractSubToDTO(contractSub);
+                if (dto != null) {
+                    dto.setId(subscriptionId);
+                }
+                return dto;
+            });
+    }
+
+    /**
+     * Returns container inputs for a subscription.
+     */
+    public CompletableFuture<byte[]> getContainerInputs(SubscriptionDTO subscription, long interval) {
+        // The timestamp is generated now, and the caller is the agent's address.
+        // These details should be handled by the calling service or within this method.
+        long timestamp = Instant.now().getEpochSecond();
+
+        return web3ClientService
+            .getComputeInputs(
+                subscription.getClient(),
+                BigInteger.valueOf(subscription.getId()),
+                BigInteger.valueOf(interval),
+                BigInteger.valueOf(timestamp)
+            )
+            .exceptionally(e -> {
+                log.warn(
+                    "Could not get on-chain container inputs for sub {}. Returning empty. Error: {}",
+                    subscription.getId(),
+                    e.getMessage()
+                );
+                return "".getBytes();
+            });
+    }
+
+    /**
+     * Checks if a node has already delivered a response for a given interval.
+     */
+    public CompletableFuture<Boolean> getNodeHasDeliveredResponse(
+        long subscriptionId,
+        long interval,
+        String nodeAddress,
+        Long blockNumber
+    ) {
+        // Query at the latest block by default.
+        return web3DelegateeCoordinatorService.getNodeHasDeliveredResponse(subscriptionId, interval, nodeAddress, blockNumber);
+    }
+
+    /**
+     * Gets the number of responses for a subscription interval.
+     */
+    public CompletableFuture<Integer> getSubscriptionResponseCount(long subscriptionId, long interval, Long blockNumber) {
+        return web3DelegateeCoordinatorService.getSubscriptionResponseCount(subscriptionId, interval, blockNumber);
+    }
+
+    private SubscriptionDTO convertContractSubToDTO(Router.ComputeSubscription contractSub) {
+        if (contractSub == null) {
+            return null;
+        }
+        // This mapping needs to be precise and complete based on your SubscriptionDTO definition.
+        return SubscriptionDTO.builder()
+            .client(contractSub.client)
+            .routeId(Numeric.toHexString(contractSub.routeId))
+            .containerId(Numeric.toHexString(contractSub.containerId))
+            .feeAmount(contractSub.feeAmount)
+            .feeToken(contractSub.feeToken)
+            .activeAt(contractSub.activeAt.longValue())
+            .intervalSeconds(contractSub.intervalSeconds.longValue())
+            .maxExecutions(contractSub.maxExecutions.longValue())
+            .wallet(contractSub.wallet)
+            .verifier(contractSub.verifier)
+            .redundancy(contractSub.redundancy.intValue())
+            .useDeliveryInbox(contractSub.useDeliveryInbox)
+            .build();
+    }
+
+    /**
+     * Asynchronously collects transaction success status by its hash.
+     *
+     * @param txHash The transaction hash to check.
+     * @return A CompletableFuture containing a TxStatus record.
+     */
+    public CompletableFuture<TxStatus> getTxSuccess(String txHash) {
+        return web3j
+            .ethGetTransactionReceipt(txHash)
+            .sendAsync()
+            .thenApply(ethGetTransactionReceipt -> {
+                return ethGetTransactionReceipt
+                    .getTransactionReceipt()
+                    .map(receipt -> {
+                        // Transaction found, return its status
+                        log.debug("Receipt found for tx {}: status={}", txHash, receipt.getStatus());
+                        return new TxStatus(true, receipt.isStatusOK());
+                    })
+                    .orElseGet(() -> {
+                        // Transaction not found (e.g., not yet mined)
+                        log.debug("Receipt not yet found for tx {}", txHash);
+                        return new TxStatus(false, false);
+                    });
+            })
+            .exceptionally(e -> {
+                log.error("Error fetching receipt for tx {}", txHash, e);
+                return new TxStatus(false, false); // Treat errors as not found/failed
+            });
+    }
+}

@@ -232,7 +232,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
                 boolean isValid = requestValidatorService.validateOnChainRequest(requestDTO);
 
                 if (isValid) {
-                    //                    blockChainService.processIncomingRequest(requestDTO);
+                    blockChainService.processIncomingRequest(requestDTO);
                     log.info("Relayed subscription creation: id={}", subscription.getId());
                 } else {
                     log.warn("Ignored subscription creation: id={}", subscription.getId());

@@ -11,5 +11,7 @@ public final class Constants {
     public static final String SYSTEM = "system";
     public static final String DEFAULT_LANGUAGE = "ko";
 
+    public static final String ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
     private Constants() {}
 }

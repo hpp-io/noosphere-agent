@@ -1,6 +1,7 @@
 package io.hpp.noosphere.agent.config;
 
 import io.hpp.noosphere.agent.service.NoosphereConfigService;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.concurrent.TimeUnit;
 import okhttp3.OkHttpClient;
@@ -81,6 +82,15 @@ public class Web3jConfig {
         public BigInteger getGasLimit(String contractFunc) {
             BigInteger baseLimit = super.getGasLimit(contractFunc);
             return baseLimit.multiply(BigInteger.valueOf((long) (gasConfig.getLimitMultiplier() * 100))).divide(BigInteger.valueOf(100));
+        }
+    }
+
+    @Bean
+    public BigInteger chainId(Web3j web3j) {
+        try {
+            return web3j.ethChainId().send().getChainId();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to get chain ID", e);
         }
     }
 }

@@ -1,5 +1,6 @@
 package io.hpp.noosphere.agent.service.dto;
 
+import io.hpp.noosphere.agent.service.blockchain.dto.SignatureParamsDTO;
 import io.hpp.noosphere.agent.service.dto.enumeration.RequestType;
 import java.util.Map;
 import java.util.Optional;

@@ -1,38 +1,62 @@
 package io.hpp.noosphere.agent.service.blockchain.web3;
 
+import static io.hpp.noosphere.agent.config.Constants.ZERO_ADDRESS;
+
 import io.hpp.noosphere.agent.config.ApplicationProperties;
 import io.hpp.noosphere.agent.config.Web3jConfig;
 import io.hpp.noosphere.agent.contracts.Router;
 import io.hpp.noosphere.agent.service.NoosphereConfigService;
+import io.hpp.noosphere.agent.service.blockchain.dto.SignatureParamsDTO;
 import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
 import jakarta.annotation.PostConstruct;
 import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
+import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Uint;
+import org.web3j.abi.datatypes.generated.Bytes32;
+import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.abi.datatypes.generated.Uint64;
 import org.web3j.crypto.Credentials;
+import org.web3j.crypto.Hash;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class Web3RouterService {
+
+    private static final Logger log = LoggerFactory.getLogger(Web3RouterService.class);
 
     private final NoosphereConfigService noosphereConfigService;
     private final Web3j web3j;
     private final Credentials credentials;
     private final Web3jConfig.CustomGasProvider gasProvider;
+    private final BigInteger chainId;
 
     private Router routerContract;
     private final Map<String, String> contractAddresses = new HashMap<>();
+
+    public Web3RouterService(
+        NoosphereConfigService noosphereConfigService,
+        Web3j web3j,
+        Credentials credentials,
+        Web3jConfig.CustomGasProvider gasProvider,
+        BigInteger chainId
+    ) {
+        this.noosphereConfigService = noosphereConfigService;
+        this.web3j = web3j;
+        this.credentials = credentials;
+        this.gasProvider = gasProvider;
+        this.chainId = chainId;
+    }
 
     @PostConstruct
     public void init() {
@@ -118,7 +142,7 @@ public class Web3RouterService {
                     System.arraycopy(contractNameBytes, 0, paddedBytes, 0, Math.min(contractNameBytes.length, 32));
 
                     String address = routerContract.getContractById(paddedBytes).send();
-                    if (address != null && !address.equals("0x0000000000000000000000000000000000000000")) {
+                    if (address != null && !address.equals(ZERO_ADDRESS)) {
                         contractAddresses.put(contractName, address); // Also store in cache
                     }
                 } catch (Exception e) {
@@ -130,7 +154,7 @@ public class Web3RouterService {
         //Query wallet factory address
         try {
             String walletFactoryAddress = routerContract.getWalletFactory().send();
-            if (walletFactoryAddress != null && !walletFactoryAddress.equals("0x0000000000000000000000000000000000000000")) {
+            if (walletFactoryAddress != null && !walletFactoryAddress.equals(ZERO_ADDRESS)) {
                 contractAddresses.put("WalletFactory", walletFactoryAddress);
             }
         } catch (Exception e) {
@@ -153,7 +177,7 @@ public class Web3RouterService {
                 System.arraycopy(contractNameBytes, 0, paddedBytes, 0, Math.min(contractNameBytes.length, 32));
 
                 String address = routerContract.getContractById(paddedBytes).send();
-                return address != null && !address.equals("0x0000000000000000000000000000000000000000");
+                return address != null && !address.equals(ZERO_ADDRESS);
             } catch (Exception e) {
                 log.error("Failed to check if contract {} is registered", contractName, e);
                 return false;
@@ -283,5 +307,64 @@ public class Web3RouterService {
                 throw new RuntimeException("Failed to get compute subscription", e);
             }
         });
+    }
+
+    public CompletableFuture<BigInteger> getDelegateCreatedId(
+        SubscriptionDTO subscription,
+        SignatureParamsDTO signature,
+        long blockNumber
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // 1. Create the key for the mapping
+                final org.web3j.abi.datatypes.Function dummyFunction = new org.web3j.abi.datatypes.Function(
+                    "dummy",
+                    Arrays.asList(new Address(subscription.getClient()), new Uint256(BigInteger.valueOf(signature.nonce()))),
+                    Collections.emptyList()
+                );
+                String encodedParameters = FunctionEncoder.encode(dummyFunction).substring(10);
+                byte[] key = org.web3j.utils.Numeric.hexStringToByteArray(encodedParameters);
+                byte[] hashedKey = Hash.sha3(key);
+
+                // 2. Create the function call for delegateCreatedIds
+                final org.web3j.abi.datatypes.Function function = new org.web3j.abi.datatypes.Function(
+                    Router.FUNC_DELEGATECREATEDIDS,
+                    Arrays.asList(new Bytes32(hashedKey)),
+                    Arrays.asList(new TypeReference<Uint256>() {})
+                );
+                String encodedFunction = FunctionEncoder.encode(function);
+
+                // 3. Set block parameter
+                DefaultBlockParameter blockParameter = DefaultBlockParameter.valueOf(BigInteger.valueOf(blockNumber));
+
+                // 4. Make eth_call
+                org.web3j.protocol.core.methods.request.Transaction transaction =
+                    org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction(
+                        credentials.getAddress(),
+                        routerContract.getContractAddress(),
+                        encodedFunction
+                    );
+
+                String result = web3j.ethCall(transaction, blockParameter).send().getValue();
+                return (BigInteger) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(0).getValue();
+            } catch (Exception e) {
+                log.error("Failed to get delegate created ID for owner {} and nonce {}", subscription.getClient(), signature.nonce(), e);
+                throw new RuntimeException("Failed to get delegate created ID", e);
+            }
+        });
+    }
+
+    public BigInteger getChainId() {
+        return this.chainId;
+    }
+
+    /**
+     * Returns the latest coordinator subscription ID.
+     */
+    public CompletableFuture<Long> getHeadSubscriptionId() {
+        return routerContract
+            .getLastSubscriptionId()
+            .sendAsync()
+            .thenApply(id -> id.equals(BigInteger.ZERO) ? 0L : id.subtract(BigInteger.ONE).longValue());
     }
 }

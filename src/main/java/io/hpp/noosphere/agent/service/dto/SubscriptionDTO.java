@@ -1,5 +1,9 @@
 package io.hpp.noosphere.agent.service.dto;
 
+import static io.hpp.noosphere.agent.config.Constants.ZERO_ADDRESS;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.hpp.noosphere.agent.contracts.DelegateeCoordinator;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -8,9 +12,17 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.*;
+import org.springframework.cache.annotation.Cacheable;
+import org.web3j.crypto.StructuredData;
+import org.web3j.crypto.StructuredData.Entry;
+import org.web3j.crypto.StructuredDataEncoder;
+import org.web3j.utils.Numeric;
 
 /**
  * Noosphere 구독 정보를 전송하기 위한 DTO
@@ -170,6 +182,13 @@ public class SubscriptionDTO implements Serializable {
     }
 
     /**
+     * 콜백 구독인지 확인 (간격이 0인 경우)
+     */
+    public boolean isCallback() {
+        return intervalSeconds != null && intervalSeconds == 0L;
+    }
+
+    /**
      * 지불이 있는 구독인지 확인
      */
     public boolean hasPayment() {
@@ -180,7 +199,7 @@ public class SubscriptionDTO implements Serializable {
      * 검증자가 있는지 확인
      */
     public boolean hasVerifier() {
-        return verifier != null && !verifier.equals("0x0000000000000000000000000000000000000000") && !verifier.isEmpty();
+        return verifier != null && !verifier.equals(ZERO_ADDRESS) && !verifier.isEmpty();
     }
 
     /**
@@ -224,13 +243,13 @@ public class SubscriptionDTO implements Serializable {
         return Instant.now().getEpochSecond() > this.activeAt;
     }
 
-    public int getInterval() {
+    public long getInterval() {
         if (this.intervalSeconds == 0) {
             return 1; // Callback subscriptions are always in interval 1
         }
 
         long now = Instant.now().getEpochSecond();
-        return (int) (((now - this.activeAt) / this.intervalSeconds) + 1);
+        return (((now - this.activeAt) / this.intervalSeconds) + 1);
     }
 
     /**
@@ -290,5 +309,108 @@ public class SubscriptionDTO implements Serializable {
             return false;
         }
         return getInterval() == this.maxExecutions;
+    }
+
+    /**
+     * Generates the EIP-712 typed data hash for a DelegateSubscription to be signed.
+     * The result of this method is cached to avoid re-computation for the same inputs.
+     *
+     * @param nonce The delegatee signer nonce (relative to the owner contract).
+     * @param expiry The signature expiry timestamp.
+     * @param chainId The contract chain ID (for replay protection).
+     * @param verifyingContract The EIP-712 signature verifying contract address.
+     * @return The EIP-712 message hash to be signed.
+     */
+    public byte[] getTypedDataHashForDelegation(long nonce, long expiry, BigInteger chainId, String verifyingContract) {
+        // Define the EIP-712 types
+        HashMap<String, List<Entry>> types = new HashMap<>();
+        types.put(
+            "EIP712Domain",
+            Arrays.asList(
+                new Entry("name", "string"),
+                new Entry("version", "string"),
+                new Entry("chainId", "uint256"),
+                new Entry("verifyingContract", "address")
+            )
+        );
+        types.put(
+            "DelegateSubscription",
+            Arrays.asList(new Entry("nonce", "uint256"), new Entry("expiry", "uint256"), new Entry("sub", "Subscription"))
+        );
+        types.put(
+            "Subscription",
+            Arrays.asList(
+                new Entry("client", "address"),
+                new Entry("activeAt", "uint256"),
+                new Entry("intervalSeconds", "uint256"),
+                new Entry("maxExecutions", "uint256"),
+                new Entry("redundancy", "uint256"),
+                new Entry("containerId", "bytes32"),
+                new Entry("useDeliveryInbox", "bool"),
+                new Entry("verifier", "address"),
+                new Entry("feeAmount", "uint256"),
+                new Entry("feeToken", "address"),
+                new Entry("wallet", "address"),
+                new Entry("routeId", "bytes32")
+            )
+        );
+
+        // Define the domain separator
+        // The salt is optional and not needed in most cases. A zero-bytes32 value is standard.
+        String salt = "0x0000000000000000000000000000000000000000000000000000000000000000";
+        StructuredData.EIP712Domain domain = new StructuredData.EIP712Domain("noosphere", "1", chainId.toString(), verifyingContract, salt);
+
+        // Define the message content
+        Map<String, Object> subscriptionMessage = new HashMap<>();
+        subscriptionMessage.put("client", this.client);
+        subscriptionMessage.put("activeAt", this.activeAt);
+        subscriptionMessage.put("intervalSeconds", this.intervalSeconds);
+        subscriptionMessage.put("maxExecutions", this.maxExecutions);
+        subscriptionMessage.put("redundancy", this.redundancy);
+        subscriptionMessage.put("containerId", Numeric.hexStringToByteArray(this.getContainerId()));
+        subscriptionMessage.put("useDeliveryInbox", this.useDeliveryInbox);
+        subscriptionMessage.put("verifier", this.verifier);
+        subscriptionMessage.put("feeAmount", this.feeAmount);
+        subscriptionMessage.put("feeToken", this.feeToken);
+        subscriptionMessage.put("wallet", this.wallet);
+        subscriptionMessage.put("routeId", this.routeId);
+
+        Map<String, Object> delegateMessage = new HashMap<>();
+        delegateMessage.put("nonce", nonce);
+        delegateMessage.put("expiry", expiry);
+        delegateMessage.put("sub", subscriptionMessage);
+
+        // Create the TypedData object
+        StructuredData.EIP712Message typedData = new StructuredData.EIP712Message(
+            types,
+            "DelegateSubscription", // Primary Type
+            delegateMessage,
+            domain
+        );
+
+        // Return the hash of the structured data
+        return new StructuredDataEncoder(typedData).hashStructuredData();
+    }
+
+    /**
+     * Converts this DTO to the Web3j-generated ComputeSubscription struct for the DelegateeCoordinator contract.
+     * @return A {@link DelegateeCoordinator.ComputeSubscription} instance.
+     */
+    @JsonIgnore
+    public DelegateeCoordinator.ComputeSubscription toCoordinatorComputeSubscription() {
+        return new DelegateeCoordinator.ComputeSubscription(
+            Numeric.hexStringToByteArray(this.getRouteId()),
+            Numeric.hexStringToByteArray(this.getContainerId()),
+            this.getFeeAmount(),
+            this.getClient(),
+            BigInteger.valueOf(this.getActiveAt()),
+            BigInteger.valueOf(this.getIntervalSeconds()),
+            BigInteger.valueOf(this.getMaxExecutions()),
+            this.getWallet(),
+            this.getFeeToken(),
+            this.getVerifier(),
+            BigInteger.valueOf(this.getRedundancy()),
+            this.getUseDeliveryInbox()
+        );
     }
 }
