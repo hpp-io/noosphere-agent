@@ -4,8 +4,7 @@ import static io.hpp.noosphere.agent.config.Constants.ZERO_ADDRESS;
 
 import io.hpp.noosphere.agent.config.Web3jConfig;
 import io.hpp.noosphere.agent.contracts.Delegator;
-import io.hpp.noosphere.agent.contracts.MyTransientClient;
-import io.hpp.noosphere.agent.contracts.MyTransientClient.PendingDelivery;
+import io.hpp.noosphere.agent.contracts.TransientComputeClient;
 import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
 import java.math.BigInteger;
 import java.util.List;
@@ -39,9 +38,9 @@ public class Web3ClientService {
     }
 
     /**
-     * Dynamically loads a MyTransientClient contract and calls getComputeInputs.
+     * Dynamically loads a TransientComputeClient contract and calls getComputeInputs.
      *
-     * @param clientAddress The address of the MyTransientClient contract.
+     * @param clientAddress The address of the TransientComputeClient contract.
      * @param subscriptionId The ID of the subscription.
      * @param interval The interval number.
      * @param timestamp The current timestamp.
@@ -55,50 +54,13 @@ public class Web3ClientService {
     ) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
+                TransientComputeClient clientContract = TransientComputeClient.load(clientAddress, web3j, credentials, gasProvider);
                 log.debug("Calling getComputeInputs on contract {} for subId {}", clientAddress, subscriptionId);
                 // The 'caller' is the agent's own address
                 return clientContract.getComputeInputs(subscriptionId, interval, timestamp, credentials.getAddress()).send();
             } catch (Exception e) {
                 log.error("Failed to call getComputeInputs for client {}", clientAddress, e);
                 throw new RuntimeException("Failed to get compute inputs", e);
-            }
-        });
-    }
-
-    /**
-     * Dynamically loads a MyTransientClient contract and calls requestCompute.
-     * This sends a transaction.
-     *
-     * @param clientAddress The address of the MyTransientClient contract.
-     * @param subscriptionId The ID of the subscription.
-     * @param inputs The inputs for the computation.
-     * @return A CompletableFuture containing the transaction receipt.
-     */
-    public CompletableFuture<TransactionReceipt> requestCompute(String clientAddress, BigInteger subscriptionId, byte[] inputs) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                // Use a transaction manager that can sign transactions
-                MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-                log.debug("Calling requestCompute on contract {} for subId {}", clientAddress, subscriptionId);
-                return clientContract.requestCompute(subscriptionId, inputs).send();
-            } catch (Exception e) {
-                log.error("Failed to call requestCompute for client {}", clientAddress, e);
-                throw new RuntimeException("Failed to request compute", e);
-            }
-        });
-    }
-
-    //<editor-fold desc="Transaction Functions">
-
-    public CompletableFuture<TransactionReceipt> cancelSubscription(String clientAddress, BigInteger subscriptionId) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-                return clientContract.cancelSubscription(subscriptionId).send();
-            } catch (Exception e) {
-                log.error("Failed to call cancelSubscription for client {}", clientAddress, e);
-                throw new RuntimeException("Failed to cancel subscription", e);
             }
         });
     }
@@ -118,7 +80,7 @@ public class Web3ClientService {
     ) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
+                TransientComputeClient clientContract = TransientComputeClient.load(clientAddress, web3j, credentials, gasProvider);
                 return clientContract
                     .createComputeSubscription(
                         containerId,
@@ -140,30 +102,6 @@ public class Web3ClientService {
         });
     }
 
-    public CompletableFuture<TransactionReceipt> createSubscription(
-        String clientAddress,
-        String containerId,
-        BigInteger redundancy,
-        Boolean useDeliveryInbox,
-        String feeToken,
-        BigInteger feeAmount,
-        String wallet,
-        String verifier,
-        byte[] routeId
-    ) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-                return clientContract
-                    .createSubscription(containerId, redundancy, useDeliveryInbox, feeToken, feeAmount, wallet, verifier, routeId)
-                    .send();
-            } catch (Exception e) {
-                log.error("Failed to call createSubscription for client {}", clientAddress, e);
-                throw new RuntimeException("Failed to create subscription", e);
-            }
-        });
-    }
-
     public CompletableFuture<TransactionReceipt> receiveRequestCompute(
         String clientAddress,
         BigInteger subscriptionId,
@@ -178,7 +116,7 @@ public class Web3ClientService {
     ) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
+                TransientComputeClient clientContract = TransientComputeClient.load(clientAddress, web3j, credentials, gasProvider);
                 return clientContract
                     .receiveRequestCompute(
                         subscriptionId,
@@ -202,7 +140,7 @@ public class Web3ClientService {
     public CompletableFuture<TransactionReceipt> sendRequest(String clientAddress, BigInteger subscriptionId, BigInteger interval) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
+                TransientComputeClient clientContract = TransientComputeClient.load(clientAddress, web3j, credentials, gasProvider);
                 return clientContract.sendRequest(subscriptionId, interval).send();
             } catch (Exception e) {
                 log.error("Failed to call sendRequest for client {}", clientAddress, e);
@@ -211,69 +149,27 @@ public class Web3ClientService {
         });
     }
 
-    public CompletableFuture<TransactionReceipt> updateMockSigner(String clientAddress, String newSigner) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-                return clientContract.updateMockSigner(newSigner).send();
-            } catch (Exception e) {
-                log.error("Failed to call updateMockSigner for client {}", clientAddress, e);
-                throw new RuntimeException("Failed to update mock signer", e);
-            }
-        });
-    }
-
-    //</editor-fold>
-
-    //<editor-fold desc="View/Pure Functions">
-
-    public CompletableFuture<Tuple2<Boolean, PendingDelivery>> getDelivery(String clientAddress, byte[] requestId, String node) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
+    public CompletableFuture<Tuple2<Boolean, TransientComputeClient.PendingDelivery>> getDelivery(
+        String clientAddress,
+        byte[] requestId,
+        String node
+    ) {
+        TransientComputeClient clientContract = TransientComputeClient.load(clientAddress, web3j, credentials, gasProvider);
         return clientContract.getDelivery(requestId, node).sendAsync();
     }
 
     public CompletableFuture<List> getNodesForRequest(String clientAddress, byte[] requestId) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
+        TransientComputeClient clientContract = TransientComputeClient.load(clientAddress, web3j, credentials, gasProvider);
         return clientContract.getNodesForRequest(requestId).sendAsync();
     }
 
-    public CompletableFuture<String> getSigner(String clientAddress) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-        return clientContract.getSigner().sendAsync();
-    }
-
     public CompletableFuture<Boolean> hasDelivery(String clientAddress, byte[] requestId, String node) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
+        TransientComputeClient clientContract = TransientComputeClient.load(clientAddress, web3j, credentials, gasProvider);
         return clientContract.hasDelivery(requestId, node).sendAsync();
     }
 
-    public CompletableFuture<byte[]> lastReceivedContainerId(String clientAddress) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-        return clientContract.lastReceivedContainerId().sendAsync();
-    }
-
-    public CompletableFuture<BigInteger> lastReceivedInterval(String clientAddress) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-        return clientContract.lastReceivedInterval().sendAsync();
-    }
-
-    public CompletableFuture<String> lastReceivedNode(String clientAddress) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-        return clientContract.lastReceivedNode().sendAsync();
-    }
-
-    public CompletableFuture<byte[]> lastReceivedOutput(String clientAddress) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-        return clientContract.lastReceivedOutput().sendAsync();
-    }
-
-    public CompletableFuture<BigInteger> lastReceivedSubscriptionId(String clientAddress) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
-        return clientContract.lastReceivedSubscriptionId().sendAsync();
-    }
-
     public CompletableFuture<String> typeAndVersion(String clientAddress) {
-        MyTransientClient clientContract = MyTransientClient.load(clientAddress, web3j, credentials, gasProvider);
+        TransientComputeClient clientContract = TransientComputeClient.load(clientAddress, web3j, credentials, gasProvider);
         return clientContract.typeAndVersion().sendAsync();
     }
 

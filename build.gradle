@@ -198,7 +198,8 @@ ext {
         'WalletFactory',
         'Wallet',
         'SubscriptionBatchReader',
-        'MyTransientClient'
+        'TransientComputeClient',
+        'Delegator'
         // 필요한 컨트랙트만 추가
     ]
 
