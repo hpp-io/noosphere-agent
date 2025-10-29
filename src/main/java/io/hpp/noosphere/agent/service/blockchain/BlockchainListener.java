@@ -22,6 +22,7 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 import org.web3j.protocol.Web3j;
 
 @Service
@@ -177,6 +178,35 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
         return CompletableFuture.completedFuture(null);
     }
 
+    private CompletableFuture<Void> updateResponseCountsForLastInterval(List<SubscriptionDTO> subscriptions, long blockNumber) {
+        List<SubscriptionDTO> subsOnLastInterval = subscriptions.stream().filter(SubscriptionDTO::isOnLastInterval).toList();
+
+        if (subsOnLastInterval.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        List<Long> filteredIds = subsOnLastInterval.stream().map(SubscriptionDTO::getId).toList();
+        List<Long> filteredIntervals = subsOnLastInterval.stream().map(SubscriptionDTO::getInterval).toList();
+
+        return web3BatchReader
+            .getIntervalStatuses(filteredIds, filteredIntervals, blockNumber)
+            .thenAccept(responseCounts -> {
+                Assert.isTrue(filteredIds.size() == responseCounts.size(), "Mismatched sizes for ids and counts");
+                for (int i = 0; i < filteredIds.size(); i++) {
+                    long subId = filteredIds.get(i);
+                    long interval = filteredIntervals.get(i);
+                    long count = responseCounts.get(i).redundancyCount.longValue();
+
+                    // Find the corresponding subscription and update its state
+                    subsOnLastInterval
+                        .stream()
+                        .filter(s -> s.getId() == subId)
+                        .findFirst()
+                        .ifPresent(s -> s.setResponseCount(interval, count));
+                }
+            });
+    }
+
     private CompletableFuture<Void> syncBatchSubscriptionsCreation(int startId, int endId, long blockNumber) {
         return CompletableFuture.runAsync(() -> {
             // Fetch subscriptions from the batch reader
@@ -207,21 +237,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
                 );
             }
 
-            // Logic to get response counts for subscriptions on their last interval
-            List<Long> lastIntervalIds = new ArrayList<>();
-            List<Long> lastIntervals = new ArrayList<>();
-
-            if (!lastIntervalIds.isEmpty()) {
-                List<SubscriptionBatchReader.IntervalStatus> statuses = web3BatchReader
-                    .getIntervalStatuses(lastIntervalIds, lastIntervals, blockNumber)
-                    .join();
-                for (int i = 0; i < lastIntervalIds.size(); i++) {
-                    long subId = lastIntervalIds.get(i);
-                    long interval = lastIntervals.get(i);
-                    int count = statuses.get(i).redundancyCount.intValue();
-                    subscriptions.stream().filter(s -> s.getId() == subId).findFirst().ifPresent(s -> s.setResponseCount(interval, count));
-                }
-            }
+            updateResponseCountsForLastInterval(subscriptions, blockNumber).join();
 
             // Process each subscription
             for (SubscriptionDTO subscription : subscriptions) {
