@@ -118,7 +118,7 @@ public class Web3SubscriptionBatchReaderService {
      */
     public CompletableFuture<List<SubscriptionBatchReader.IntervalStatus>> getIntervalStatuses(
         List<Long> subscriptionIds,
-        List<Integer> intervals,
+        List<Long> intervals,
         long blockNumber
     ) {
         return checkContractLoaded()
