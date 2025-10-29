@@ -209,7 +209,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
 
             // Logic to get response counts for subscriptions on their last interval
             List<Long> lastIntervalIds = new ArrayList<>();
-            List<Integer> lastIntervals = new ArrayList<>();
+            List<Long> lastIntervals = new ArrayList<>();
 
             if (!lastIntervalIds.isEmpty()) {
                 List<SubscriptionBatchReader.IntervalStatus> statuses = web3BatchReader
@@ -217,7 +217,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
                     .join();
                 for (int i = 0; i < lastIntervalIds.size(); i++) {
                     long subId = lastIntervalIds.get(i);
-                    Long interval = lastIntervals.get(i).longValue();
+                    long interval = lastIntervals.get(i);
                     int count = statuses.get(i).redundancyCount.intValue();
                     subscriptions.stream().filter(s -> s.getId() == subId).findFirst().ifPresent(s -> s.setResponseCount(interval, count));
                 }
