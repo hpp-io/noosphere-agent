@@ -142,7 +142,7 @@ public class SubscriptionDTO implements Serializable {
      * Key: Interval number, Value: Response count.
      * Using ConcurrentHashMap for thread-safety.
      */
-    private final Map<Long, Integer> responses = new ConcurrentHashMap<>();
+    private final Map<Long, Long> responses = new ConcurrentHashMap<>();
 
     /**
      * Tracks if the local node has already replied for a given interval.
@@ -258,8 +258,8 @@ public class SubscriptionDTO implements Serializable {
      * @param interval The subscription interval.
      * @return The number of responses, defaults to 0 if not tracked.
      */
-    public int getResponseCount(Long interval) {
-        return this.responses.getOrDefault(interval, 0);
+    public long getResponseCount(Long interval) {
+        return this.responses.getOrDefault(interval, 0L);
     }
 
     /**
@@ -268,7 +268,7 @@ public class SubscriptionDTO implements Serializable {
      * @param interval The subscription interval to set.
      * @param count    The count of tracked subscription responses.
      */
-    public void setResponseCount(Long interval, int count) {
+    public void setResponseCount(Long interval, long count) {
         this.responses.put(interval, count);
     }
 
@@ -297,14 +297,14 @@ public class SubscriptionDTO implements Serializable {
         return isLastInterval && maxRedundancyMet;
     }
 
-    private boolean isPastLastInterval() {
+    public boolean isPastLastInterval() {
         if (!isActive()) {
             return false;
         }
         return getInterval() > this.maxExecutions;
     }
 
-    private boolean isOnLastInterval() {
+    public boolean isOnLastInterval() {
         if (!isActive()) {
             return false;
         }

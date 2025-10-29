@@ -460,6 +460,25 @@ public class Web3DelegateeCoordinatorService {
         return checkContractLoaded().thenCompose(c -> c.requestCommitments(requestId).sendAsync());
     }
 
+    /**
+     * Gets the commitment for a specific request ID from the DelegateeCoordinator contract.
+     * @param subscriptionId The ID of the subscription.
+     * @param interval
+     * @return A CompletableFuture containing the commitment as a byte array.
+     */
+    public CompletableFuture<DelegateeCoordinator.Commitment> getCommitment(long subscriptionId, long interval) {
+        return checkContractLoaded()
+            .thenCompose(contract -> {
+                return contract
+                    .getCommitment(BigInteger.valueOf(subscriptionId), BigInteger.valueOf(interval))
+                    .sendAsync()
+                    .exceptionally(e -> {
+                        log.error("Failed to get commitment for subscription ID {} and interval ID {}", subscriptionId, interval, e);
+                        throw new RuntimeException("Failed to get commitment", e);
+                    });
+            });
+    }
+
     public CompletableFuture<String> getTypeAndVersion() {
         return checkContractLoaded().thenCompose(c -> c.typeAndVersion().sendAsync());
     }
