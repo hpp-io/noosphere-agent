@@ -91,6 +91,7 @@ public class ComputationService {
             // 컨테이너 체인 실행
             for (int index = 0; index < containers.size(); index++) {
                 String container = containers.get(index);
+                log.debug("container id: {}", container);
                 String url = getContainerUrl(container);
                 Map<String, String> headers = getHeaders(container);
 

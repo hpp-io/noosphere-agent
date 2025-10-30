@@ -69,6 +69,10 @@ public class ContainerManagerService {
         }
     }
 
+    public List<String> getActiveContainers() {
+        return configs.stream().map(ApplicationProperties.NoosphereContainer::getId).collect(Collectors.toList());
+    }
+
     /**
      * Initialize Docker client - tries multiple methods to connect
      */
