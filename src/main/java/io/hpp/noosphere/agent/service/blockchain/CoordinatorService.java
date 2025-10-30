@@ -13,11 +13,18 @@ import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
 import java.math.BigInteger;
 import java.security.SignatureException;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Bool;
+import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.StaticStruct;
+import org.web3j.abi.datatypes.generated.*;
 import org.web3j.crypto.Sign;
 import org.web3j.protocol.Web3j;
 import org.web3j.utils.Numeric;
@@ -234,5 +241,45 @@ public class CoordinatorService {
                 log.error("Error fetching receipt for tx {}", txHash, e);
                 return new TxStatus(false, false); // Treat errors as not found/failed
             });
+    }
+
+    /**
+     * Encodes commitment data into a byte array according to the ABI specification,
+     * matching `ethers.AbiCoder.defaultAbiCoder().encode()`.
+     *
+     * @param data The commitment data to encode.
+     * @return The ABI-encoded byte array.
+     */
+    public byte[] encodeCommitment(DelegateeCoordinator.Commitment data) {
+        // Create a StaticStruct representing the tuple:
+        // (bytes32,uint64,bytes32,uint32,bool,uint16,address,uint256,address,address,address)
+        final StaticStruct commitmentStruct = new StaticStruct(
+            new Bytes32(data.requestId),
+            new Uint64(data.subscriptionId),
+            new Bytes32(data.containerId),
+            new Uint32(data.interval),
+            new Bool(data.useDeliveryInbox),
+            new Uint16(data.redundancy),
+            new Address(data.walletAddress),
+            new Uint256(data.feeAmount),
+            new Address(data.feeToken),
+            new Address(data.verifier),
+            new Address(data.coordinator)
+        );
+
+        // To get the raw `abi.encode` value, we create a dummy function
+        // with the struct as the single parameter, encode the function call,
+        // and then strip the 4-byte function selector.
+        final Function dummyFunction = new Function(
+            "dummy", // Function name does not affect parameter encoding
+            Collections.singletonList(commitmentStruct),
+            Collections.emptyList()
+        );
+
+        String encodedFunctionCall = FunctionEncoder.encode(dummyFunction);
+
+        // The result of `abi.encode` is just the encoded parameters,
+        // so we remove the function selector (first 10 chars: "0x" + 8 hex chars).
+        return Numeric.hexStringToByteArray(encodedFunctionCall.substring(10));
     }
 }

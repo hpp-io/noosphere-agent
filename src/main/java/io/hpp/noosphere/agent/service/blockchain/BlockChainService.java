@@ -27,6 +27,8 @@ public class BlockChainService {
     private static final Logger log = LoggerFactory.getLogger(BlockChainService.class);
     private static final String BLOCKED_TX = "0xblocked";
 
+    private record ShouldProcessResult(boolean should, byte[] commitment) {}
+
     private final Web3j web3j;
     private final CoordinatorService coordinator;
     private final WalletService wallet;
@@ -156,38 +158,42 @@ public class BlockChainService {
 
         // Process regular subscriptions
         subscriptions.forEach((subId, subscription) -> {
-            shouldProcess(new OnchainSubscriptionId(subId), subscription, false).thenAccept(should -> {
-                if (should) {
-                    processSubscription(new OnchainSubscriptionId(subId), subscription, false, null);
+            shouldProcess(new OnchainSubscriptionId(subId), subscription, false).thenAccept(result -> {
+                if (result.should()) {
+                    processSubscription(new OnchainSubscriptionId(subId), subscription, false, null, result.commitment());
                 }
             });
         });
 
         // Process delegated subscriptions
         delegateSubscriptions.forEach((delegateSubId, params) -> {
-            shouldProcess(delegateSubId, params.subscription(), true).thenAccept(should -> {
-                if (should) {
-                    processSubscription(delegateSubId, params.subscription(), true, params);
+            shouldProcess(delegateSubId, params.subscription(), true).thenAccept(result -> {
+                if (result.should()) {
+                    processSubscription(delegateSubId, params.subscription(), true, params, null);
                 }
             });
         });
     }
 
-    private CompletableFuture<Boolean> shouldProcess(SubscriptionIdentifier subId, SubscriptionDTO subscription, boolean isDelegated) {
+    private CompletableFuture<ShouldProcessResult> shouldProcess(
+        SubscriptionIdentifier subId,
+        SubscriptionDTO subscription,
+        boolean isDelegated
+    ) {
         if (!subscription.isActive()) {
-            return CompletableFuture.completedFuture(false);
+            return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
         }
 
         long interval = subscription.getInterval();
         SubscriptionRunKey runKey = new SubscriptionRunKey(subId, interval);
 
         if (pendingTxs.containsKey(runKey)) {
-            return CompletableFuture.completedFuture(false); // Already processing
+            return CompletableFuture.completedFuture(new ShouldProcessResult(false, null)); // Already processing
         }
 
         if (txAttempts.getOrDefault(runKey, new AtomicInteger(0)).get() >= 3) {
             log.warn("Subscription {} has exceeded max retries for interval {}.", subId, interval);
-            return CompletableFuture.completedFuture(false);
+            return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
         }
 
         if (!isDelegated) {
@@ -197,7 +203,7 @@ public class BlockChainService {
                 .thenCompose(hasResponded -> {
                     if (hasResponded) {
                         subscription.setNodeReplied(interval);
-                        return CompletableFuture.completedFuture(false); // Already responded, do not process
+                        return CompletableFuture.completedFuture(new ShouldProcessResult(false, null)); // Already responded, do not process
                     }
 
                     // If not responded, check if a valid commitment exists for this interval
@@ -209,12 +215,12 @@ public class BlockChainService {
                             if (!hasCommitment) {
                                 log.trace("No commitment found for subId {}, interval {}. Skipping.", subId, interval);
                             }
-                            return hasCommitment;
+                            return new ShouldProcessResult(hasCommitment, coordinator.encodeCommitment(commitment));
                         });
                 });
         }
 
-        return CompletableFuture.completedFuture(true);
+        return CompletableFuture.completedFuture(new ShouldProcessResult(true, null));
     }
 
     @Async
@@ -245,7 +251,8 @@ public class BlockChainService {
         SubscriptionIdentifier id,
         SubscriptionDTO subscription,
         boolean delegated,
-        DelegatedSubscriptionData delegatedParams
+        DelegatedSubscriptionData delegatedParams,
+        byte[] commitment
     ) {
         long interval = subscription.getInterval();
         SubscriptionRunKey runKey = new SubscriptionRunKey(id, interval);
@@ -272,7 +279,7 @@ public class BlockChainService {
 
                 // Serialize output and deliver transaction
                 SerializedOutput serialized = serializeContainerOutput(lastResult);
-                return deliver(subscription, delegated, delegatedParams, serialized);
+                return deliver(subscription, delegated, delegatedParams, serialized, commitment);
             })
             .thenAccept(txHash -> {
                 if (txHash != null) {
@@ -306,7 +313,7 @@ public class BlockChainService {
             );
         } else {
             computationInputFuture = coordinator
-                .getContainerInputs(subscription, subscription.getInterval())
+                .getContainerInputs(subscription, (int) subscription.getInterval())
                 .thenApply(inputHex ->
                     ComputationInputDTO.builder()
                         .source(ComputationLocation.ON_CHAIN.name())
@@ -330,7 +337,8 @@ public class BlockChainService {
         SubscriptionDTO subscription,
         boolean delegated,
         DelegatedSubscriptionData delegatedParams,
-        SerializedOutput serializedOutput
+        SerializedOutput serializedOutput,
+        byte[] commitment
     ) {
         if (delegated) {
             return wallet.deliverComputeDelegatee(
@@ -341,7 +349,13 @@ public class BlockChainService {
                 serializedOutput.proof()
             );
         } else {
-            return wallet.deliverCompute(subscription, serializedOutput.input(), serializedOutput.output(), serializedOutput.proof(), null);
+            return wallet.deliverCompute(
+                subscription,
+                serializedOutput.input(),
+                serializedOutput.output(),
+                serializedOutput.proof(),
+                commitment
+            );
         }
     }
 
