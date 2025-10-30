@@ -1,5 +1,6 @@
 package io.hpp.noosphere.agent.service.blockchain;
 
+import io.hpp.noosphere.agent.contracts.DelegateeCoordinator;
 import io.hpp.noosphere.agent.contracts.Router;
 import io.hpp.noosphere.agent.service.blockchain.dto.ExistingDelegateSubscription;
 import io.hpp.noosphere.agent.service.blockchain.dto.SignatureParamsDTO;
@@ -151,6 +152,17 @@ public class CoordinatorService {
                 );
                 return "".getBytes();
             });
+    }
+
+    /**
+     * Gets the commitment for a specific subscription and interval.
+     *
+     * @param subscriptionId The ID of the subscription.
+     * @param interval       The interval number.
+     * @return A CompletableFuture containing the commitment as a byte array.
+     */
+    public CompletableFuture<DelegateeCoordinator.Commitment> getCommitment(long subscriptionId, long interval) {
+        return web3DelegateeCoordinatorService.getCommitment(subscriptionId, interval);
     }
 
     /**

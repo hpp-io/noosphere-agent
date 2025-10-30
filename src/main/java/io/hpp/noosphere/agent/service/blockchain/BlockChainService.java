@@ -1,5 +1,7 @@
 package io.hpp.noosphere.agent.service.blockchain;
 
+import static io.hpp.noosphere.agent.config.Constants.ZERO_ADDRESS;
+
 import io.hpp.noosphere.agent.service.ComputationService;
 import io.hpp.noosphere.agent.service.blockchain.dto.*;
 import io.hpp.noosphere.agent.service.dto.*;
@@ -17,6 +19,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.web3j.protocol.Web3j;
+import org.web3j.utils.Numeric;
 
 @Service
 public class BlockChainService {
@@ -191,11 +194,23 @@ public class BlockChainService {
             // For non-delegated, check if already responded
             return coordinator
                 .getNodeHasDeliveredResponse(subscription.getId(), interval, wallet.getAddress(), null)
-                .thenApply(hasResponded -> {
+                .thenCompose(hasResponded -> {
                     if (hasResponded) {
                         subscription.setNodeReplied(interval);
+                        return CompletableFuture.completedFuture(false); // Already responded, do not process
                     }
-                    return !hasResponded;
+
+                    // If not responded, check if a valid commitment exists for this interval
+                    return coordinator
+                        .getCommitment(subscription.getId(), interval)
+                        .thenApply(commitment -> {
+                            // A valid commitment is not bytes32(0)
+                            boolean hasCommitment = !Numeric.toHexString(commitment.requestId).equals(ZERO_ADDRESS);
+                            if (!hasCommitment) {
+                                log.trace("No commitment found for subId {}, interval {}. Skipping.", subId, interval);
+                            }
+                            return hasCommitment;
+                        });
                 });
         }
 
