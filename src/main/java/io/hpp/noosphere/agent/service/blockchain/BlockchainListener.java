@@ -2,12 +2,14 @@ package io.hpp.noosphere.agent.service.blockchain;
 
 import io.hpp.noosphere.agent.config.ApplicationProperties;
 import io.hpp.noosphere.agent.contracts.SubscriptionBatchReader;
+import io.hpp.noosphere.agent.service.ContainerLookupService;
 import io.hpp.noosphere.agent.service.NoosphereConfigService;
 import io.hpp.noosphere.agent.service.RequestValidatorService;
 import io.hpp.noosphere.agent.service.blockchain.web3.Web3RouterService;
 import io.hpp.noosphere.agent.service.blockchain.web3.Web3SubscriptionBatchReaderService;
 import io.hpp.noosphere.agent.service.dto.OnchainRequestDTO;
 import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,6 +26,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.web3j.protocol.Web3j;
+import org.web3j.utils.Numeric;
 
 @Service
 public class BlockchainListener implements ApplicationListener<ApplicationReadyEvent> {
@@ -36,6 +39,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
     private final RequestValidatorService requestValidatorService;
     private final BlockChainService blockChainService;
     private final ApplicationProperties.Chain properties;
+    private final ContainerLookupService containerLookupService;
 
     private final AtomicLong lastSyncedBlock = new AtomicLong(0);
     private final AtomicLong lastSubscriptionId = new AtomicLong(0);
@@ -47,7 +51,8 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
         Web3SubscriptionBatchReaderService web3BatchReader,
         RequestValidatorService requestValidatorService,
         BlockChainService blockChainService,
-        NoosphereConfigService noosphereConfigService
+        NoosphereConfigService noosphereConfigService,
+        ContainerLookupService containerLookupService
     ) {
         this.web3j = web3j;
         this.web3Router = web3Router;
@@ -55,6 +60,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
         this.requestValidatorService = requestValidatorService;
         this.blockChainService = blockChainService;
         this.properties = noosphereConfigService.getActiveConfig().getChain();
+        this.containerLookupService = containerLookupService;
         log.info("Initialized ChainListenerService");
     }
 
@@ -221,8 +227,8 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
                 subscriptions.add(
                     SubscriptionDTO.builder()
                         .id(currentId)
-                        .routeId(Arrays.toString(contractSubscriptions.get(i).routeId))
-                        .containerId(Arrays.toString(contractSubscriptions.get(i).containerId))
+                        .routeId(new String(contractSubscriptions.get(i).routeId, StandardCharsets.UTF_8).replaceAll("\\x00+$", ""))
+                        .containerId(containerLookupService.getContainers(contractSubscriptions.get(i).containerId).getFirst())
                         .feeAmount(contractSubscriptions.get(i).feeAmount)
                         .feeToken(contractSubscriptions.get(i).feeToken)
                         .client(contractSubscriptions.get(i).client)
