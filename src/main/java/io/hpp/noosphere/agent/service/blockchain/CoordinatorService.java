@@ -11,8 +11,10 @@ import io.hpp.noosphere.agent.service.blockchain.web3.Web3DelegatorService;
 import io.hpp.noosphere.agent.service.blockchain.web3.Web3RouterService;
 import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.SignatureException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
@@ -25,6 +27,7 @@ import org.web3j.abi.datatypes.Bool;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.StaticStruct;
 import org.web3j.abi.datatypes.generated.*;
+import org.web3j.crypto.Hash;
 import org.web3j.crypto.Sign;
 import org.web3j.protocol.Web3j;
 import org.web3j.utils.Numeric;
@@ -281,5 +284,37 @@ public class CoordinatorService {
         // The result of `abi.encode` is just the encoded parameters,
         // so we remove the function selector (first 10 chars: "0x" + 8 hex chars).
         return Numeric.hexStringToByteArray(encodedFunctionCall.substring(10));
+    }
+
+    /**
+     * Generates a request ID by packing and hashing the subscription ID and interval,
+     * equivalent to `keccak256(abi.encodePacked(uint64, uint32))`.
+     *
+     * @param subscriptionId The subscription ID (uint64).
+     * @param interval The interval number (uint32).
+     * @return The calculated request ID as a 32-byte array.
+     */
+    public byte[] getRequestId(BigInteger subscriptionId, BigInteger interval) {
+        // Allocate a 12-byte buffer (8 for uint64 + 4 for uint32)
+        ByteBuffer buffer = ByteBuffer.allocate(12);
+
+        // Put the subscriptionId as a long (8 bytes)
+        buffer.putLong(subscriptionId.longValue());
+        // Put the interval as an int (4 bytes)
+        buffer.putInt(interval.intValue());
+
+        // Calculate the keccak256 hash of the packed data
+        return Hash.sha3(buffer.array());
+    }
+
+    public CompletableFuture<Boolean> hasRequestCommitments(BigInteger subscriptionId, BigInteger interval) {
+        byte[] requestId = getRequestId(subscriptionId, interval);
+        return web3DelegateeCoordinatorService
+            .getRequestCommitment(requestId)
+            .thenApply(commitment -> {
+                // A commitment of bytes32(0) is a 32-byte array filled with zeros.
+                // We check if the returned commitment is NOT equal to that.
+                return !Arrays.equals(commitment, new byte[32]);
+            });
     }
 }

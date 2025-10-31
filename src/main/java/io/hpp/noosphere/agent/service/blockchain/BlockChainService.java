@@ -1,12 +1,11 @@
 package io.hpp.noosphere.agent.service.blockchain;
 
-import static io.hpp.noosphere.agent.config.Constants.ZERO_ADDRESS;
-
 import io.hpp.noosphere.agent.service.ComputationService;
 import io.hpp.noosphere.agent.service.blockchain.dto.*;
 import io.hpp.noosphere.agent.service.dto.*;
 import io.hpp.noosphere.agent.service.dto.enumeration.ComputationLocation;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -19,7 +18,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.web3j.protocol.Web3j;
-import org.web3j.utils.Numeric;
 
 @Service
 public class BlockChainService {
@@ -205,17 +203,19 @@ public class BlockChainService {
                         subscription.setNodeReplied(interval);
                         return CompletableFuture.completedFuture(new ShouldProcessResult(false, null)); // Already responded, do not process
                     }
-
                     // If not responded, check if a valid commitment exists for this interval
                     return coordinator
-                        .getCommitment(subscription.getId(), interval)
-                        .thenApply(commitment -> {
-                            // A valid commitment is not bytes32(0)
-                            boolean hasCommitment = !Numeric.toHexString(commitment.requestId).equals(ZERO_ADDRESS);
-                            if (!hasCommitment) {
-                                log.trace("No commitment found for subId {}, interval {}. Skipping.", subId, interval);
+                        .hasRequestCommitments(BigInteger.valueOf(subscription.getId()), BigInteger.valueOf(interval))
+                        .thenCompose(hasCommitment -> {
+                            if (hasCommitment) {
+                                // If commitment exists, fetch it to pass it to the processing step.
+                                return coordinator
+                                    .getCommitment(subscription.getId(), interval)
+                                    .thenApply(commitment -> new ShouldProcessResult(true, coordinator.encodeCommitment(commitment)));
+                            } else {
+                                // If no commitment, no need to process.
+                                return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
                             }
-                            return new ShouldProcessResult(hasCommitment, coordinator.encodeCommitment(commitment));
                         });
                 });
         }
