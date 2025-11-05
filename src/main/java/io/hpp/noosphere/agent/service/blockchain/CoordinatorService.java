@@ -119,7 +119,8 @@ public class CoordinatorService {
      * Returns the latest coordinator subscription ID.
      */
     public CompletableFuture<Long> getHeadSubscriptionId() {
-        return web3RouterService.getHeadSubscriptionId();
+        // Call the correct method on Web3RouterService and convert the result to Long.
+        return web3RouterService.getLastSubscriptionId().thenApply(BigInteger::longValue);
     }
 
     /**
