@@ -288,6 +288,18 @@ public class ApplicationProperties {
         private Boolean register;
 
         private String url;
+
+        @Valid
+        @NestedConfigurationProperty
+        private KeepAlive keepAlive = new KeepAlive();
+    }
+
+    @Setter
+    @Getter
+    public static class KeepAlive {
+
+        private boolean enabled;
+        private long intervalMs = 60000; // Default to 1 minute
     }
 
     @Setter

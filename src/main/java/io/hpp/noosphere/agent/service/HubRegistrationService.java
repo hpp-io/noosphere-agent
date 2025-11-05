@@ -8,6 +8,8 @@ import io.hpp.noosphere.agent.service.util.CommonUtil;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import lombok.Getter;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -25,6 +27,9 @@ public class HubRegistrationService {
     private final WalletService walletService;
     private final RestTemplate restTemplate;
     private final ApplicationProperties.NoosphereConfig noosphereConfig;
+
+    @Setter
+    @Getter
     private UUID agentId;
 
     public HubRegistrationService(
