@@ -238,13 +238,21 @@ application:
     forwardStats: true
     manageContainers: true
     startupWait: 5.0
-
+    agent:
+      name: 'noosphere-agent'
+      public-endpoint: 'http://localhost:8080'
+      api-key: 'YOUR_SECRET_API_KEY'
+      email: 'agent-admin@example.com'
     # Server Configuration
     server:
       port: 8080
       rateLimit:
         numRequests: 100
         period: 60
+    # Hub Configuration
+    hub:
+      register: true
+      url: 'http://localhost:8081'
 
     # Blockchain Configuration
     chain:

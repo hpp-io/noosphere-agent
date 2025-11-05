@@ -59,7 +59,7 @@ class BlockchainListenerTest {
     void setUp() throws IOException {
         // Mock ApplicationProperties
         ApplicationProperties.Chain chainProps = new ApplicationProperties.Chain();
-        chainProps.setTrailHeadBlocks(1);
+        chainProps.setTrailHeadBlocks(1L);
         ApplicationProperties.SnapshotSync snapshotSyncProps = new ApplicationProperties.SnapshotSync();
         snapshotSyncProps.setStartingSubId(5);
         snapshotSyncProps.setBatchSize(100);
