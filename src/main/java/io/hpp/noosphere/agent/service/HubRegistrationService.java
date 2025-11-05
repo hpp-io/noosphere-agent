@@ -2,9 +2,11 @@ package io.hpp.noosphere.agent.service;
 
 import io.hpp.noosphere.agent.config.ApplicationProperties;
 import io.hpp.noosphere.agent.service.blockchain.WalletService;
+import io.hpp.noosphere.agent.service.dto.AgentDTO;
 import io.hpp.noosphere.agent.service.dto.AgentRegistrationDTO;
 import io.hpp.noosphere.agent.service.util.CommonUtil;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +25,7 @@ public class HubRegistrationService {
     private final WalletService walletService;
     private final RestTemplate restTemplate;
     private final ApplicationProperties.NoosphereConfig noosphereConfig;
+    private UUID agentId;
 
     public HubRegistrationService(
         NoosphereConfigService noosphereConfigService,
@@ -95,8 +98,11 @@ public class HubRegistrationService {
 
         String registerUrl = hubUrl + "/api/agents/register";
         try {
-            restTemplate.postForObject(registerUrl, registrationDTO, String.class);
-            log.info("Successfully registered agent {} with the hub.", agentAddress);
+            AgentDTO agentDTO = restTemplate.postForObject(registerUrl, registrationDTO, AgentDTO.class);
+            if (agentDTO != null) {
+                this.agentId = agentDTO.getId();
+            }
+            log.info("Successfully registered agent {} with the hub.", agentDTO);
         } catch (Exception e) {
             log.error("Failed to register agent with the hub: {}", e.getMessage());
         }
