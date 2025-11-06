@@ -46,7 +46,7 @@ public class ComputationController {
         @RequestBody OffchainRequestDTO requestData,
         HttpServletRequest request
     ) {
-        return handleComputationRequest(requestData, request, false);
+        return handleComputationRequest(requestData, request);
     }
 
     @PostMapping("/delegated")
@@ -54,7 +54,7 @@ public class ComputationController {
         @RequestBody DelegatedRequestDTO requestData,
         HttpServletRequest request
     ) {
-        return handleComputationRequest(requestData, request, false);
+        return handleComputationRequest(requestData, request);
     }
 
     @PostMapping("/offchain/batch")
@@ -194,8 +194,7 @@ public class ComputationController {
     // Helper methods
     private CompletableFuture<ResponseEntity<Map<String, Object>>> handleComputationRequest(
         BaseRequestDTO requestData,
-        HttpServletRequest request,
-        boolean isStream
+        HttpServletRequest request
     ) {
         String clientIp = getClientIp(request);
         if (clientIp == null) {
@@ -204,7 +203,7 @@ public class ComputationController {
 
         try {
             Map<String, Object> returnObj = new HashMap<>();
-            if (requestData instanceof OffchainRequestDTO requestDTO && !isStream) {
+            if (requestData instanceof OffchainRequestDTO requestDTO) {
                 requestDTO.setId(UUID.randomUUID());
                 requestDTO.setClientIp(clientIp);
                 requestDTO.setType(RequestType.OFF_CHAIN_COMPUTATION);
@@ -222,7 +221,7 @@ public class ComputationController {
                         );
                         return ResponseEntity.ok(returnObj);
                     });
-            } else if (requestData instanceof DelegatedRequestDTO requestDTO && !isStream) {
+            } else if (requestData instanceof DelegatedRequestDTO requestDTO) {
                 return blockChainService
                     .processIncomingRequest(requestDTO)
                     .thenApply(v -> {
