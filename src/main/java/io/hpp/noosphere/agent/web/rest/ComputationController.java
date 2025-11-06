@@ -126,14 +126,13 @@ public class ComputationController {
             List<Map<String, Object>> results = new ArrayList<>();
             List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-            // TODO: delegated bach process
-            //            for (DelegatedRequestDTO item : validRequestList) {
-            //                item.setId(UUID.randomUUID());
-            //                item.setClientIp(clientIp);
-            //                item.setType(RequestType.OFF_CHAIN_COMPUTATION);
-            //                futures.add(computationService.processOffchainComputation(item));
-            //                results.add(Map.of("id", item.getId()));
-            //            }
+            for (DelegatedRequestDTO item : validRequestList) {
+                item.setId(UUID.randomUUID());
+                item.setClientIp(clientIp);
+                item.setType(RequestType.DELEGATED_COMPUTATION);
+                futures.add(blockChainService.processIncomingRequest(item));
+                results.add(Map.of("id", item.getId()));
+            }
 
             return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(v -> {
                 log.debug(
