@@ -4,6 +4,7 @@ import io.hpp.noosphere.agent.domain.Computation;
 import io.hpp.noosphere.agent.service.ComputationService;
 import io.hpp.noosphere.agent.service.DataStoreService;
 import io.hpp.noosphere.agent.service.RequestValidatorService;
+import io.hpp.noosphere.agent.service.blockchain.BlockChainService;
 import io.hpp.noosphere.agent.service.dto.BaseRequestDTO;
 import io.hpp.noosphere.agent.service.dto.DelegatedRequestDTO;
 import io.hpp.noosphere.agent.service.dto.OffchainRequestDTO;
@@ -26,15 +27,18 @@ public class ComputationController {
     private final RequestValidatorService requestValidatorService;
     private final ComputationService computationService;
     private final DataStoreService dataStoreService;
+    private final BlockChainService blockChainService;
 
     public ComputationController(
         RequestValidatorService requestValidatorService,
         ComputationService computationService,
-        DataStoreService dataStoreService
+        DataStoreService dataStoreService,
+        BlockChainService blockChainService
     ) {
         this.requestValidatorService = requestValidatorService;
         this.computationService = computationService;
         this.dataStoreService = dataStoreService;
+        this.blockChainService = blockChainService;
     }
 
     @PostMapping("/offchain")
@@ -220,22 +224,21 @@ public class ComputationController {
                         return ResponseEntity.ok(returnObj);
                     });
             } else if (requestData instanceof DelegatedRequestDTO requestDTO && !isStream) {
-                // TODO: delegated call section
-                //                return chainManagerService.procassDelegated(requestDTO)
-                //                    .thenApply(v -> {
-                //                        log.debug("Processed REST response - endpoint: {}, " +
-                //                                "method: {}, status: 200, type: {}, id: {}",
-                //                            request.getRequestURI(), request.getMethod(),
-                //                            requestDTO.getType(), requestDTO.getId());
-                //                        return ResponseEntity.ok(returnObj);
-                //                    });
+                return blockChainService
+                    .processIncomingRequest(requestDTO)
+                    .thenApply(v -> {
+                        log.debug(
+                            "Processed REST response - endpoint: {}, " + "method: {}, status: 200, type: {}, id: {}",
+                            request.getRequestURI(),
+                            request.getMethod(),
+                            requestDTO.getType(),
+                            requestDTO.getId()
+                        );
+                        return ResponseEntity.ok(returnObj);
+                    });
             } else {
                 throw new IllegalArgumentException("Unknown request type: " + requestData.toString());
             }
-
-            return CompletableFuture.completedFuture(
-                ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Unknown request type"))
-            );
         } catch (Exception e) {
             log.error("Error processing Computation request", e);
             return CompletableFuture.completedFuture(
