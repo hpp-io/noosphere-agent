@@ -300,6 +300,7 @@ public class ApplicationProperties {
 
         private boolean enabled;
         private long intervalMs = 60000; // Default to 1 minute
+        private long batchSize = 100;
     }
 
     @Setter

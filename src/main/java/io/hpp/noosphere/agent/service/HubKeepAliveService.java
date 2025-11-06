@@ -1,8 +1,12 @@
 package io.hpp.noosphere.agent.service;
 
 import io.hpp.noosphere.agent.config.ApplicationProperties;
+import io.hpp.noosphere.agent.service.blockchain.BlockChainService;
 import io.hpp.noosphere.agent.service.blockchain.WalletService;
+import io.hpp.noosphere.agent.service.dto.DelegatedRequestDTO;
 import io.hpp.noosphere.agent.service.dto.KeepAliveResponseDTO;
+import io.hpp.noosphere.agent.service.util.CommonUtil;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,11 +21,19 @@ public class HubKeepAliveService {
     private final ApplicationProperties applicationProperties;
     private final WalletService walletService;
     private final RestTemplate restTemplate;
-    private HubRegistrationService hubRegistrationService;
+    private final HubRegistrationService hubRegistrationService;
+    private final BlockChainService blockChainService;
 
-    public HubKeepAliveService(ApplicationProperties applicationProperties, WalletService walletService) {
+    public HubKeepAliveService(
+        ApplicationProperties applicationProperties,
+        WalletService walletService,
+        HubRegistrationService hubRegistrationService,
+        BlockChainService blockChainService
+    ) {
         this.applicationProperties = applicationProperties;
         this.walletService = walletService;
+        this.hubRegistrationService = hubRegistrationService;
+        this.blockChainService = blockChainService;
         this.restTemplate = new RestTemplate();
     }
 
@@ -49,17 +61,35 @@ public class HubKeepAliveService {
             // Send a POST request and expect a KeepAliveResponseDTO
             KeepAliveResponseDTO response = restTemplate.postForObject(keepAliveUrl, null, KeepAliveResponseDTO.class);
 
-            if (response != null && response.getStatusCode() == 200) {
+            if (response != null && CommonUtil.isValid(response.getCount()) && response.getCount() > 0) {
                 log.info(
-                    "Successfully sent keep-alive signal for agent {}. Hub responded with status {}.",
+                    "Successfully sent keep-alive signal for agent {}. Hub subscription count: {}.",
                     agentAddress,
-                    response.getStatusCode()
+                    response.getCount()
                 );
-            } else {
-                log.warn(
-                    "Received a non-200 status from hub keep-alive: {}",
-                    response != null ? response.getStatusCode() : "null response"
-                );
+                // 처리할 구독이 있는 경우, 배치 단위로 나누어 처리합니다.
+                long remainingCount = response.getCount();
+                long batchSize = hubConfig.getKeepAlive().getBatchSize();
+
+                while (remainingCount > 0) {
+                    long fetchCount = Math.min(remainingCount, batchSize);
+                    String getSubscriptionUrl = hubUrl + "/api/agents/" + agentAddress + "/subscriptions?count=" + fetchCount;
+
+                    log.info("Fetching next batch of {} delegated requests from the hub...", fetchCount);
+                    DelegatedRequestDTO[] subscriptions = restTemplate.getForObject(getSubscriptionUrl, DelegatedRequestDTO[].class);
+
+                    if (subscriptions != null) {
+                        for (DelegatedRequestDTO requestDTO : subscriptions) {
+                            blockChainService.processIncomingRequest(requestDTO);
+                        }
+                        remainingCount -= subscriptions.length;
+                        log.info("Processed {} requests, {} remaining.", subscriptions.length, remainingCount);
+                    } else {
+                        // 더 이상 가져올 구독이 없으면 루프를 중단합니다.
+                        log.warn("Received null subscription array from hub. Stopping fetch loop.");
+                        break;
+                    }
+                }
             }
         } catch (Exception e) {
             log.error("Failed to send keep-alive signal to hub at {}: {}", keepAliveUrl, e.getMessage());

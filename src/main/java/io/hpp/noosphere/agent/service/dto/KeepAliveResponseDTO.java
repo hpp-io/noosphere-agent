@@ -5,5 +5,5 @@ import lombok.Data;
 @Data
 public class KeepAliveResponseDTO {
 
-    private Integer statusCode;
+    private Long count;
 }
