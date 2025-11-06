@@ -4,6 +4,7 @@ import io.hpp.noosphere.agent.domain.Computation;
 import io.hpp.noosphere.agent.service.ComputationService;
 import io.hpp.noosphere.agent.service.DataStoreService;
 import io.hpp.noosphere.agent.service.RequestValidatorService;
+import io.hpp.noosphere.agent.service.blockchain.BlockChainService;
 import io.hpp.noosphere.agent.service.dto.BaseRequestDTO;
 import io.hpp.noosphere.agent.service.dto.DelegatedRequestDTO;
 import io.hpp.noosphere.agent.service.dto.OffchainRequestDTO;
@@ -26,15 +27,18 @@ public class ComputationController {
     private final RequestValidatorService requestValidatorService;
     private final ComputationService computationService;
     private final DataStoreService dataStoreService;
+    private final BlockChainService blockChainService;
 
     public ComputationController(
         RequestValidatorService requestValidatorService,
         ComputationService computationService,
-        DataStoreService dataStoreService
+        DataStoreService dataStoreService,
+        BlockChainService blockChainService
     ) {
         this.requestValidatorService = requestValidatorService;
         this.computationService = computationService;
         this.dataStoreService = dataStoreService;
+        this.blockChainService = blockChainService;
     }
 
     @PostMapping("/offchain")
@@ -42,7 +46,7 @@ public class ComputationController {
         @RequestBody OffchainRequestDTO requestData,
         HttpServletRequest request
     ) {
-        return handleComputationRequest(requestData, request, false);
+        return handleComputationRequest(requestData, request);
     }
 
     @PostMapping("/delegated")
@@ -50,7 +54,7 @@ public class ComputationController {
         @RequestBody DelegatedRequestDTO requestData,
         HttpServletRequest request
     ) {
-        return handleComputationRequest(requestData, request, false);
+        return handleComputationRequest(requestData, request);
     }
 
     @PostMapping("/offchain/batch")
@@ -122,14 +126,13 @@ public class ComputationController {
             List<Map<String, Object>> results = new ArrayList<>();
             List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-            // TODO: delegated bach process
-            //            for (DelegatedRequestDTO item : validRequestList) {
-            //                item.setId(UUID.randomUUID());
-            //                item.setClientIp(clientIp);
-            //                item.setType(RequestType.OFF_CHAIN_COMPUTATION);
-            //                futures.add(computationService.processOffchainComputation(item));
-            //                results.add(Map.of("id", item.getId()));
-            //            }
+            for (DelegatedRequestDTO item : validRequestList) {
+                item.setId(UUID.randomUUID());
+                item.setClientIp(clientIp);
+                item.setType(RequestType.DELEGATED_COMPUTATION);
+                futures.add(blockChainService.processIncomingRequest(item));
+                results.add(Map.of("id", item.getId()));
+            }
 
             return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(v -> {
                 log.debug(
@@ -191,8 +194,7 @@ public class ComputationController {
     // Helper methods
     private CompletableFuture<ResponseEntity<Map<String, Object>>> handleComputationRequest(
         BaseRequestDTO requestData,
-        HttpServletRequest request,
-        boolean isStream
+        HttpServletRequest request
     ) {
         String clientIp = getClientIp(request);
         if (clientIp == null) {
@@ -201,7 +203,7 @@ public class ComputationController {
 
         try {
             Map<String, Object> returnObj = new HashMap<>();
-            if (requestData instanceof OffchainRequestDTO requestDTO && !isStream) {
+            if (requestData instanceof OffchainRequestDTO requestDTO) {
                 requestDTO.setId(UUID.randomUUID());
                 requestDTO.setClientIp(clientIp);
                 requestDTO.setType(RequestType.OFF_CHAIN_COMPUTATION);
@@ -219,23 +221,22 @@ public class ComputationController {
                         );
                         return ResponseEntity.ok(returnObj);
                     });
-            } else if (requestData instanceof DelegatedRequestDTO requestDTO && !isStream) {
-                // TODO: delegated call section
-                //                return chainManagerService.procassDelegated(requestDTO)
-                //                    .thenApply(v -> {
-                //                        log.debug("Processed REST response - endpoint: {}, " +
-                //                                "method: {}, status: 200, type: {}, id: {}",
-                //                            request.getRequestURI(), request.getMethod(),
-                //                            requestDTO.getType(), requestDTO.getId());
-                //                        return ResponseEntity.ok(returnObj);
-                //                    });
+            } else if (requestData instanceof DelegatedRequestDTO requestDTO) {
+                return blockChainService
+                    .processIncomingRequest(requestDTO)
+                    .thenApply(v -> {
+                        log.debug(
+                            "Processed REST response - endpoint: {}, " + "method: {}, status: 200, type: {}, id: {}",
+                            request.getRequestURI(),
+                            request.getMethod(),
+                            requestDTO.getType(),
+                            requestDTO.getId()
+                        );
+                        return ResponseEntity.ok(returnObj);
+                    });
             } else {
                 throw new IllegalArgumentException("Unknown request type: " + requestData.toString());
             }
-
-            return CompletableFuture.completedFuture(
-                ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Unknown request type"))
-            );
         } catch (Exception e) {
             log.error("Error processing Computation request", e);
             return CompletableFuture.completedFuture(

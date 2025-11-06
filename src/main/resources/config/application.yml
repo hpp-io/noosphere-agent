@@ -238,13 +238,27 @@ application:
     forwardStats: true
     manageContainers: true
     startupWait: 5.0
-
+    agent:
+      name: 'noosphere-agent'
+      public-endpoint: 'http://localhost:8080'
+      api-key: 'YOUR_SECRET_API_KEY'
+      email: 'agent-admin@example.com'
     # Server Configuration
     server:
       port: 8080
       rateLimit:
         numRequests: 100
         period: 60
+    # Hub Configuration
+    hub:
+      register: true
+      url: 'http://localhost:8081'
+      keep-alive:
+        # Keep-alive 기능 활성화 여부
+        enabled: true
+        # Keep-alive 요청을 보내는 주기 (밀리초 단위, 예: 60000 = 1분)
+        interval-ms: 60000
+        batchSize: 100
 
     # Blockchain Configuration
     chain:
@@ -260,7 +274,7 @@ application:
           - 'execution reverted'
           - 'out of gas'
       snapshotSync:
-        sleep: 1.0
+        sleep: 1
         batchSize: 100
         startingSubId: 0
         syncPeriod: 3000

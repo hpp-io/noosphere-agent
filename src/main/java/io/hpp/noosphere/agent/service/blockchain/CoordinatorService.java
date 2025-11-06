@@ -1,5 +1,6 @@
 package io.hpp.noosphere.agent.service.blockchain;
 
+import io.hpp.noosphere.agent.contracts.DelegateeCoordinator;
 import io.hpp.noosphere.agent.contracts.Router;
 import io.hpp.noosphere.agent.service.blockchain.dto.ExistingDelegateSubscription;
 import io.hpp.noosphere.agent.service.blockchain.dto.SignatureParamsDTO;
@@ -10,13 +11,23 @@ import io.hpp.noosphere.agent.service.blockchain.web3.Web3DelegatorService;
 import io.hpp.noosphere.agent.service.blockchain.web3.Web3RouterService;
 import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.SignatureException;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Bool;
+import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.StaticStruct;
+import org.web3j.abi.datatypes.generated.*;
+import org.web3j.crypto.Hash;
 import org.web3j.crypto.Sign;
 import org.web3j.protocol.Web3j;
 import org.web3j.utils.Numeric;
@@ -108,7 +119,8 @@ public class CoordinatorService {
      * Returns the latest coordinator subscription ID.
      */
     public CompletableFuture<Long> getHeadSubscriptionId() {
-        return web3RouterService.getHeadSubscriptionId();
+        // Call the correct method on Web3RouterService and convert the result to Long.
+        return web3RouterService.getLastSubscriptionId().thenApply(BigInteger::longValue);
     }
 
     /**
@@ -151,6 +163,17 @@ public class CoordinatorService {
                 );
                 return "".getBytes();
             });
+    }
+
+    /**
+     * Gets the commitment for a specific subscription and interval.
+     *
+     * @param subscriptionId The ID of the subscription.
+     * @param interval       The interval number.
+     * @return A CompletableFuture containing the commitment as a byte array.
+     */
+    public CompletableFuture<DelegateeCoordinator.Commitment> getCommitment(long subscriptionId, long interval) {
+        return web3DelegateeCoordinatorService.getCommitment(subscriptionId, interval);
     }
 
     /**
@@ -221,6 +244,78 @@ public class CoordinatorService {
             .exceptionally(e -> {
                 log.error("Error fetching receipt for tx {}", txHash, e);
                 return new TxStatus(false, false); // Treat errors as not found/failed
+            });
+    }
+
+    /**
+     * Encodes commitment data into a byte array according to the ABI specification,
+     * matching `ethers.AbiCoder.defaultAbiCoder().encode()`.
+     *
+     * @param data The commitment data to encode.
+     * @return The ABI-encoded byte array.
+     */
+    public byte[] encodeCommitment(DelegateeCoordinator.Commitment data) {
+        // Create a StaticStruct representing the tuple:
+        // (bytes32,uint64,bytes32,uint32,bool,uint16,address,uint256,address,address,address)
+        final StaticStruct commitmentStruct = new StaticStruct(
+            new Bytes32(data.requestId),
+            new Uint64(data.subscriptionId),
+            new Bytes32(data.containerId),
+            new Uint32(data.interval),
+            new Bool(data.useDeliveryInbox),
+            new Uint16(data.redundancy),
+            new Address(data.walletAddress),
+            new Uint256(data.feeAmount),
+            new Address(data.feeToken),
+            new Address(data.verifier),
+            new Address(data.coordinator)
+        );
+
+        // To get the raw `abi.encode` value, we create a dummy function
+        // with the struct as the single parameter, encode the function call,
+        // and then strip the 4-byte function selector.
+        final Function dummyFunction = new Function(
+            "dummy", // Function name does not affect parameter encoding
+            Collections.singletonList(commitmentStruct),
+            Collections.emptyList()
+        );
+
+        String encodedFunctionCall = FunctionEncoder.encode(dummyFunction);
+
+        // The result of `abi.encode` is just the encoded parameters,
+        // so we remove the function selector (first 10 chars: "0x" + 8 hex chars).
+        return Numeric.hexStringToByteArray(encodedFunctionCall.substring(10));
+    }
+
+    /**
+     * Generates a request ID by packing and hashing the subscription ID and interval,
+     * equivalent to `keccak256(abi.encodePacked(uint64, uint32))`.
+     *
+     * @param subscriptionId The subscription ID (uint64).
+     * @param interval The interval number (uint32).
+     * @return The calculated request ID as a 32-byte array.
+     */
+    public byte[] getRequestId(BigInteger subscriptionId, BigInteger interval) {
+        // Allocate a 12-byte buffer (8 for uint64 + 4 for uint32)
+        ByteBuffer buffer = ByteBuffer.allocate(12);
+
+        // Put the subscriptionId as a long (8 bytes)
+        buffer.putLong(subscriptionId.longValue());
+        // Put the interval as an int (4 bytes)
+        buffer.putInt(interval.intValue());
+
+        // Calculate the keccak256 hash of the packed data
+        return Hash.sha3(buffer.array());
+    }
+
+    public CompletableFuture<Boolean> hasRequestCommitments(BigInteger subscriptionId, BigInteger interval) {
+        byte[] requestId = getRequestId(subscriptionId, interval);
+        return web3DelegateeCoordinatorService
+            .getRequestCommitment(requestId)
+            .thenApply(commitment -> {
+                // A commitment of bytes32(0) is a 32-byte array filled with zeros.
+                // We check if the returned commitment is NOT equal to that.
+                return !Arrays.equals(commitment, new byte[32]);
             });
     }
 }

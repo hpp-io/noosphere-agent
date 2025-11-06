@@ -81,7 +81,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
             snapshotSync(headBlock).join(); // Wait for snapshot sync to complete
             isSnapshotSyncing.set(false);
 
-            long headSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue();
+            long headSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue(); // This now returns the highest ID directly
             lastSubscriptionId.set(headSubId);
 
             log.info("Finished snapshot sync. Last synced block: {}, Last sub ID: {}", headBlock, headSubId);
@@ -111,7 +111,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
                 snapshotSync(targetBlock).join(); // Wait for sync to complete
 
                 lastSyncedBlock.set(targetBlock);
-                long newHeadSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue();
+                long newHeadSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue(); // This now returns the highest ID directly
                 lastSubscriptionId.set(newHeadSubId);
 
                 log.info("Sync complete. Last synced block: {}, Last sub ID: {}", targetBlock, newHeadSubId);
@@ -129,7 +129,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
     private CompletableFuture<Void> snapshotSync(long headBlock) {
         return CompletableFuture.runAsync(() -> {
             try {
-                long headSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue();
+                long headSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue(); // This now returns the highest ID directly
                 log.info("Snapshot sync: Found highest subscription ID {} at block {}", headSubId, headBlock);
 
                 long startId = lastSubscriptionId.get() + 1;

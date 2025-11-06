@@ -269,8 +269,17 @@ public class Web3RouterService {
                 String result = web3j.ethCall(transaction, blockParameter).send().getValue();
                 BigInteger lastId = (BigInteger) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(0).getValue();
 
-                log.info("Retrieved last subscription ID: {} at block {}", lastId, blockNumber != null ? blockNumber : "latest");
-                return lastId;
+                // The contract returns the total count, so the highest ID is count - 1.
+                // If count is 0, there are no subscriptions, so we return 0.
+                BigInteger highestId = lastId.equals(BigInteger.ZERO) ? BigInteger.ZERO : lastId.subtract(BigInteger.ONE);
+
+                log.info(
+                    "Retrieved highest subscription ID: {} (from count: {}) at block {}",
+                    highestId,
+                    lastId,
+                    blockNumber != null ? blockNumber : "latest"
+                );
+                return highestId;
             } catch (Exception e) {
                 log.error("Failed to get last subscription ID", e);
                 throw new RuntimeException("Failed to get last subscription ID", e);
@@ -356,15 +365,5 @@ public class Web3RouterService {
 
     public BigInteger getChainId() {
         return this.chainId;
-    }
-
-    /**
-     * Returns the latest coordinator subscription ID.
-     */
-    public CompletableFuture<Long> getHeadSubscriptionId() {
-        return routerContract
-            .getLastSubscriptionId()
-            .sendAsync()
-            .thenApply(id -> id.equals(BigInteger.ZERO) ? 0L : id.subtract(BigInteger.ONE).longValue());
     }
 }
