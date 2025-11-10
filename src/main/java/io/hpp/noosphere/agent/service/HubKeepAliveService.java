@@ -21,18 +21,18 @@ public class HubKeepAliveService {
     private final ApplicationProperties applicationProperties;
     private final WalletService walletService;
     private final RestTemplate restTemplate;
-    private final HubRegistrationService hubRegistrationService;
+    private final AgentService agentService;
     private final BlockChainService blockChainService;
 
     public HubKeepAliveService(
         ApplicationProperties applicationProperties,
         WalletService walletService,
-        HubRegistrationService hubRegistrationService,
+        AgentService agentService,
         BlockChainService blockChainService
     ) {
         this.applicationProperties = applicationProperties;
         this.walletService = walletService;
-        this.hubRegistrationService = hubRegistrationService;
+        this.agentService = agentService;
         this.blockChainService = blockChainService;
         this.restTemplate = new RestTemplate();
     }
@@ -49,31 +49,25 @@ public class HubKeepAliveService {
             return;
         }
 
-        String agentAddress = hubRegistrationService.getAgentId() != null
-            ? hubRegistrationService.getAgentId().toString()
-            : walletService.getAddress();
+        String agentId = agentService.getRegisteredAgent().getId().toString();
         String hubUrl = hubConfig.getUrl();
-        String keepAliveUrl = hubUrl + "/api/agents/" + agentAddress + "/keep-alive";
+        String keepAliveUrl = hubUrl + "/api/agents/" + agentId + "/keep-alive";
 
         try {
-            log.debug("Sending keep-alive ping to hub for agent {}", agentAddress);
+            log.debug("Sending keep-alive ping to hub for agent {}", agentId);
 
             // Send a POST request and expect a KeepAliveResponseDTO
             KeepAliveResponseDTO response = restTemplate.postForObject(keepAliveUrl, null, KeepAliveResponseDTO.class);
 
             if (response != null && CommonUtil.isValid(response.getCount()) && response.getCount() > 0) {
-                log.info(
-                    "Successfully sent keep-alive signal for agent {}. Hub subscription count: {}.",
-                    agentAddress,
-                    response.getCount()
-                );
+                log.info("Successfully sent keep-alive signal for agent {}. Hub subscription count: {}.", agentId, response.getCount());
                 // 처리할 구독이 있는 경우, 배치 단위로 나누어 처리합니다.
                 long remainingCount = response.getCount();
                 long batchSize = hubConfig.getKeepAlive().getBatchSize();
 
                 while (remainingCount > 0) {
                     long fetchCount = Math.min(remainingCount, batchSize);
-                    String getSubscriptionUrl = hubUrl + "/api/agents/" + agentAddress + "/subscriptions?count=" + fetchCount;
+                    String getSubscriptionUrl = hubUrl + "/api/agents/" + agentId + "/subscriptions?count=" + fetchCount;
 
                     log.info("Fetching next batch of {} delegated requests from the hub...", fetchCount);
                     DelegatedRequestDTO[] subscriptions = restTemplate.getForObject(getSubscriptionUrl, DelegatedRequestDTO[].class);

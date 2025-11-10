@@ -20,4 +20,5 @@
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
     <include file="/config/liquibase/changelog/20250922000001_added_noosphere_entities.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/20250925000001_add_updated_at_column.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20251106000001_added_entity_Agent.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>
