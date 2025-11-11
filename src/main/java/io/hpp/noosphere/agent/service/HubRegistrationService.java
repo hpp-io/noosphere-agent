@@ -27,18 +27,12 @@ public class HubRegistrationService {
     private final WalletService walletService;
     private final RestTemplate restTemplate;
     private final ApplicationProperties.NoosphereConfig noosphereConfig;
+    private final AgentService agentService;
 
-    @Setter
-    @Getter
-    private UUID agentId;
-
-    public HubRegistrationService(
-        NoosphereConfigService noosphereConfigService,
-        WalletService walletService,
-        ContainerManagerService containerManagerService
-    ) {
+    public HubRegistrationService(NoosphereConfigService noosphereConfigService, WalletService walletService, AgentService agentService) {
         this.noosphereConfig = noosphereConfigService.getActiveConfig();
         this.walletService = walletService;
+        this.agentService = agentService;
         this.restTemplate = new RestTemplate();
     }
 
@@ -61,20 +55,23 @@ public class HubRegistrationService {
      * and if not, attempts a new registration.
      */
     private void checkAndRegister() {
-        String agentAddress = walletService.getAddress();
         String hubUrl = noosphereConfig.getHub().getUrl();
-        String checkUrl = hubUrl + "/api/agents/" + agentAddress;
-
+        String checkUrl = hubUrl + "/api/agents/";
+        UUID registeredId = agentService.getRegisteredAgent().getId();
         try {
             // 1. Check if the agent is already registered with the hub.
             log.info("Checking registration status with hub at: {}", checkUrl);
-            restTemplate.getForObject(checkUrl, String.class);
-            log.info("Agent {} is already registered with the hub.", agentAddress);
+            if (registeredId != null) {
+                restTemplate.getForObject(checkUrl + registeredId, String.class);
+            } else {
+                registerNewAgent(hubUrl, walletService.getAddress());
+            }
+            log.info("Agent {} is already registered with the hub.", registeredId);
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
                 // 2. If not registered (404 Not Found), register a new agent.
                 log.info("Agent not found on hub. Proceeding with registration...");
-                registerNewAgent(hubUrl, agentAddress);
+                registerNewAgent(hubUrl, walletService.getAddress());
             } else {
                 log.error("Error checking agent registration status: {}", e.getMessage());
             }
@@ -105,7 +102,7 @@ public class HubRegistrationService {
         try {
             AgentDTO agentDTO = restTemplate.postForObject(registerUrl, registrationDTO, AgentDTO.class);
             if (agentDTO != null) {
-                this.agentId = agentDTO.getId();
+                agentService.syncAgent(agentDTO);
             }
             log.info("Successfully registered agent {} with the hub.", agentDTO);
         } catch (Exception e) {
