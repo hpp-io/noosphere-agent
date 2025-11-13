@@ -10,4 +10,5 @@ public class ContainerOutputDTO implements ContainerResultDTO {
 
     private String container;
     private Map<String, Object> output;
+    private String proof;
 }

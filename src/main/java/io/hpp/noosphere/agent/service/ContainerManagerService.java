@@ -43,6 +43,7 @@ public class ContainerManagerService {
     private final Map<String, String> urlMappings = new ConcurrentHashMap<>();
     private final Map<String, String> bearerMappings = new ConcurrentHashMap<>();
     private final Map<String, String> containers = new ConcurrentHashMap<>();
+    private final Map<String, String> verifiers = new ConcurrentHashMap<>();
     private final Set<String> images = new HashSet<>();
 
     public ContainerManagerService(NoosphereConfigService noosphereConfigService) {
@@ -63,6 +64,7 @@ public class ContainerManagerService {
             this.dockerClient = initializeDockerClient();
             if (dockerClient != null) {
                 log.info("Docker client successfully initialized");
+                initializeContainers();
             } else {
                 log.error("Failed to initialize Docker client");
             }
@@ -260,11 +262,10 @@ public class ContainerManagerService {
     /**
      * Container setup and execution
      */
-    @Async
-    public CompletableFuture<Void> setup() {
+    public void initializeContainers() {
         if (!managed || dockerClient == null) {
             log.info("Container management is disabled or Docker client is not available");
-            return CompletableFuture.completedFuture(null);
+            return;
         }
 
         try {
@@ -276,19 +277,16 @@ public class ContainerManagerService {
             // Wait for startup
             Thread.sleep((long) (startupWait * 1000));
             log.info("Container setup completed");
-
-            return CompletableFuture.completedFuture(null);
         } catch (Exception e) {
-            log.error("Container setup failed", e);
-            return CompletableFuture.failedFuture(e);
+            throw new RuntimeException("Failed to setup containers", e);
         }
     }
 
     /**
-     * Run forever (health check and monitoring)
+     * Periodically checks the health of managed containers and restarts them if they are unhealthy.
      */
     @Scheduled(fixedDelay = 30000)
-    public void runForever() {
+    public void checkContainerHealth() {
         if (!managed || dockerClient == null) {
             return;
         }
@@ -317,9 +315,15 @@ public class ContainerManagerService {
         }
 
         log.info("Stopping all managed containers");
-        for (String containerId : containers.keySet()) {
+        stopContainers(containers);
+        stopContainers(verifiers);
+        cleanup();
+    }
+
+    private void stopContainers(Map<String, ?> containerMap) {
+        for (String containerId : containerMap.keySet()) {
             try {
-                String containerName = containers.get(containerId);
+                String containerName = containerMap.get(containerId).toString();
                 dockerClient.stopContainerCmd(containerName).exec();
                 log.info("Stopped container: {}", containerName);
             } catch (Exception e) {
@@ -435,22 +439,31 @@ public class ContainerManagerService {
                 .collect(Collectors.toList());
 
             // Create container
-            CreateContainerResponse container = dockerClient
+            com.github.dockerjava.api.command.CreateContainerCmd createContainerCmd = dockerClient
                 .createContainerCmd(config.getImage())
                 .withName(containerName)
                 .withExposedPorts(exposedPorts)
                 .withPortBindings(portBindings)
                 .withEnv(envList)
-                .withBinds(binds)
-                .withCmd(config.getCommand() != null ? config.getCommand().split(" ") : null)
-                .exec();
+                .withBinds(binds);
+
+            // Set command only if it is provided and not blank
+            if (config.getCommand() != null && !config.getCommand().isBlank()) {
+                createContainerCmd.withCmd(config.getCommand().trim().split(" "));
+            }
+
+            CreateContainerResponse container = createContainerCmd.exec();
 
             // Start container
             dockerClient.startContainerCmd(container.getId()).exec();
             log.info("Started container: {} ({})", containerName, container.getId());
 
             // Save container information
-            containers.put(config.getId(), containerName);
+            if (config.getVerifierAddress() != null) {
+                verifiers.put(config.getId(), containerName);
+            } else {
+                containers.put(config.getId(), containerName);
+            }
 
             // Get dynamically allocated port information
             updateDynamicPortMappings(config, container.getId());
