@@ -263,7 +263,7 @@ public class BlockChainService {
         pendingTxs.put(runKey, BLOCKED_TX);
 
         // Execute containers and process the result
-        executeOnContainers(subscription, delegated, delegatedParams)
+        executeOnContainers(subscription, delegated, delegatedParams, extractRequestIdFromCommitment(commitment), commitment)
             .thenCompose(results -> {
                 if (results.isEmpty() || results.get(results.size() - 1) instanceof ContainerErrorDTO) {
                     log.error("Container execution failed for {}: {}", runKey, results);
@@ -300,7 +300,9 @@ public class BlockChainService {
     private CompletableFuture<List<ContainerResultDTO>> executeOnContainers(
         SubscriptionDTO subscription,
         boolean delegated,
-        DelegatedSubscriptionData delegatedParams
+        DelegatedSubscriptionData delegatedParams,
+        byte[] requestId,
+        byte[] commitment
     ) {
         CompletableFuture<ComputationInputDTO> computationInputFuture;
         if (delegated) {
@@ -328,7 +330,9 @@ public class BlockChainService {
                 UUID.randomUUID(),
                 computationInput,
                 List.of(subscription.getContainerId()),
-                subscription.hasVerifier()
+                subscription.hasVerifier(),
+                requestId,
+                commitment
             )
         );
     }
@@ -377,9 +381,25 @@ public class BlockChainService {
         String outputString = output.getOutput().toString();
         byte[] inputBytes = new byte[0];
         byte[] outputBytes = outputString.getBytes();
-        byte[] proofBytes = new byte[0];
+        byte[] proofBytes = output.getProof().getBytes();
         return new SerializedOutput(inputBytes, outputBytes, proofBytes);
     }
 
     private record SerializedOutput(byte[] input, byte[] output, byte[] proof) {}
+
+    /**
+     * Extracts the requestId (first 32 bytes) from the ABI-encoded commitment data.
+     *
+     * @param commitment The full commitment byte array.
+     * @return The 32-byte requestId.
+     */
+    private byte[] extractRequestIdFromCommitment(byte[] commitment) {
+        if (commitment == null || commitment.length < 32) {
+            log.error("Invalid or too short commitment data provided to extract requestId.");
+            return new byte[32]; // Return an empty bytes32 array to avoid nulls
+        }
+        byte[] requestId = new byte[32];
+        System.arraycopy(commitment, 0, requestId, 0, 32);
+        return requestId;
+    }
 }

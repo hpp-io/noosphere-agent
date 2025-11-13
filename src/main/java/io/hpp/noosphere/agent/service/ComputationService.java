@@ -1,11 +1,15 @@
 package io.hpp.noosphere.agent.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hpp.noosphere.agent.config.ApplicationProperties;
 import io.hpp.noosphere.agent.exception.ContainerException;
 import io.hpp.noosphere.agent.service.dto.*;
 import io.hpp.noosphere.agent.service.dto.enumeration.ComputationLocation;
 import io.hpp.noosphere.agent.service.dto.enumeration.ContainerStatus;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
@@ -14,6 +18,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.web3j.utils.Numeric;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -69,10 +74,12 @@ public class ComputationService {
      */
     private CompletableFuture<List<ContainerResultDTO>> runComputation(
         UUID ComputationId,
-        ComputationInputDTO ComputationInput,
+        ComputationInputDTO computationInput,
         List<String> containers,
         Optional<OffchainRequestDTO> request,
-        Boolean requiresProof
+        Boolean requiresProof,
+        byte[] requestId,
+        byte[] commitment
     ) {
         return CompletableFuture.supplyAsync(() -> {
             // 작업 시작
@@ -82,14 +89,14 @@ public class ComputationService {
 
             // 첫 번째 컨테이너 입력 데이터 설정
             ContainerInputDTO inputData = ContainerInputDTO.builder()
-                .source(ComputationInput.getSource())
-                .destination(containers.size() == 1 ? ComputationInput.getDestination() : ComputationLocation.OFF_CHAIN.name())
-                .data(ComputationInput.getData())
+                .source(computationInput.getSource())
+                .destination(containers.size() == 1 ? computationInput.getDestination() : ComputationLocation.OFF_CHAIN.name())
+                .data(computationInput.getData())
                 .requiresProof(requiresProof)
                 .build();
 
             // 컨테이너 체인 실행
-            for (int index = 0; index < containers.size(); index++) {
+            for (int index = 0; index < (requiresProof ? containers.size() + 1 : containers.size()); index++) {
                 String container = containers.get(index);
                 log.debug("container id: {}", container);
                 String url = getContainerUrl(container);
@@ -109,7 +116,7 @@ public class ComputationService {
                         .block();
 
                     // 성공 결과 추가
-                    results.add(new ContainerOutputDTO(container, response));
+                    results.add(new ContainerOutputDTO(container, response, null));
                     dataStoreService.trackContainerStatus(container, ContainerStatus.SUCCESS);
 
                     // 다음 컨테이너를 위한 입력 데이터 준비
@@ -118,12 +125,49 @@ public class ComputationService {
                             .source(ComputationLocation.OFF_CHAIN.toString())
                             .destination(
                                 index == containers.size() - 2
-                                    ? ComputationInput.getDestination()
+                                    ? computationInput.getDestination()
                                     : ComputationLocation.OFF_CHAIN.toString()
                             )
                             .data(response)
                             .requiresProof(requiresProof)
                             .build();
+                    }
+
+                    // If proof is required, prepare and call the verifier container
+                    if (
+                        computationInput.getSource().equals(ComputationLocation.ON_CHAIN.toString()) &&
+                        requiresProof &&
+                        index == containers.size() - 1
+                    ) {
+                        log.info("Proof generation required. Preparing input for verifier.");
+                        // This is where you would construct the proof input
+                        ProofInputDTO proofInput = buildProofInput(
+                            requestId, // Assuming requestId is passed in data
+                            commitment,
+                            computationInput.getData(), // Assuming original input is passed
+                            response
+                        );
+
+                        // You would then call the verifier container with `proofInput`
+                        // For now, we just log it.
+                        log.debug("Proof Input DTO: {}", proofInput);
+
+                        String proofResponse = webClient
+                            .post()
+                            .uri(url)
+                            .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(proofInput)
+                            .retrieve()
+                            .bodyToMono(String.class)
+                            .timeout(Duration.ofMinutes(3))
+                            .block();
+                        // Cast the last result to ContainerOutputDTO to set the proof.
+                        ContainerResultDTO lastResult = results.getLast();
+                        if (lastResult instanceof ContainerOutputDTO) {
+                            ((ContainerOutputDTO) lastResult).setProof(proofResponse);
+                            log.info("Proof generated and attached to the result.");
+                        }
                     }
                 } catch (Exception e) {
                     // 오류 처리
@@ -139,7 +183,6 @@ public class ComputationService {
                     return results;
                 }
             }
-
             // 작업 성공
             request.ifPresent(msg -> dataStoreService.setSuccess(msg, results));
             return results;
@@ -153,9 +196,11 @@ public class ComputationService {
         UUID ComputationId,
         ComputationInputDTO ComputationInput,
         List<String> containers,
-        boolean requiresProof
+        boolean requiresProof,
+        byte[] requestId,
+        byte[] commitment
     ) {
-        return runComputation(ComputationId, ComputationInput, containers, Optional.empty(), requiresProof);
+        return runComputation(ComputationId, ComputationInput, containers, Optional.empty(), requiresProof, requestId, commitment);
     }
 
     /**
@@ -173,7 +218,9 @@ public class ComputationService {
             ComputationInput,
             request.getContainers(),
             Optional.of(request),
-            request.getRequiresProof()
+            request.getRequiresProof(),
+            null,
+            null
         ).thenApply(results -> null);
     }
 
@@ -221,7 +268,7 @@ public class ComputationService {
                 try {
                     String finalResult = new String(concatenateChunks(chunks));
                     Map<String, Object> output = Map.of("output", finalResult);
-                    List<ContainerResultDTO> results = List.of(new ContainerOutputDTO(container, output));
+                    List<ContainerResultDTO> results = List.of(new ContainerOutputDTO(container, output, null));
 
                     dataStoreService.setSuccess(request, results);
                     dataStoreService.trackContainerStatus(container, ContainerStatus.SUCCESS);
@@ -292,5 +339,29 @@ public class ComputationService {
             offset += chunk.length;
         }
         return result;
+    }
+
+    /**
+     * Helper method to build the input DTO for the proof generation/verification container.
+     */
+    private ProofInputDTO buildProofInput(byte[] requestId, byte[] commitment, Map<String, Object> Input, Map<String, Object> output)
+        throws JsonProcessingException {
+        // Convert byte arrays and strings to hex strings, similar to ethers.hexlify
+        String requestIdHex = Numeric.toHexString(requestId);
+        String commitmentHex = Numeric.toHexString(commitment);
+        String inputString = new ObjectMapper().writeValueAsString(Input);
+        String inputHex = Numeric.toHexString(inputString.getBytes(StandardCharsets.UTF_8));
+
+        // Assuming the output map needs to be serialized to a string first
+        String outputString = new ObjectMapper().writeValueAsString(output);
+        String outputHex = Numeric.toHexString(outputString.getBytes(StandardCharsets.UTF_8));
+
+        return ProofInputDTO.builder()
+            .requestId(requestIdHex)
+            .commitment(InlineDataDTO.builder().value(commitmentHex).build())
+            .input(InlineDataDTO.builder().value(inputHex).build())
+            .output(InlineDataDTO.builder().value(outputHex).build())
+            .timestamp(Instant.now().getEpochSecond())
+            .build();
     }
 }
