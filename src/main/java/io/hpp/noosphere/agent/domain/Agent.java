@@ -46,11 +46,6 @@ public class Agent implements Serializable {
     @Column(name = "api_key", nullable = false)
     private String apiKey;
 
-    @NotNull
-    @Column(name = "status_code", length = 20, nullable = false)
-    @Enumerated(EnumType.STRING)
-    private StatusCode statusCode;
-
     @Lob
     @Column(name = "description")
     private String description;
@@ -87,7 +82,6 @@ public class Agent implements Serializable {
             ", name='" + getName() + "'" +
             ", apiUrl='" + getApiUrl() + "'" +
             ", apiKey='" + getApiKey() + "'" +
-            ", statusCode='" + getStatusCode() + "'" +
             ", description='" + getDescription() + "'" +
             ", createdAt='" + getCreatedAt() + "'" +
             ", updatedAt='" + getUpdatedAt() + "'" +

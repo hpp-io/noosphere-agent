@@ -33,9 +33,6 @@ public class AgentDTO implements Serializable {
     @NotNull
     private String apiKey;
 
-    @NotNull
-    private StatusCode statusCode;
-
     @Lob
     private String description;
 
@@ -72,7 +69,6 @@ public class AgentDTO implements Serializable {
             .append("name", name)
             .append("apiUrl", apiUrl)
             .append("apiKey", apiKey)
-            .append("statusCode", statusCode)
             .append("description", description)
             .append("createdAt", createdAt)
             .append("updatedAt", updatedAt)

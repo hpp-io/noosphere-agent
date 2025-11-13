@@ -231,7 +231,6 @@ public class ApplicationProperties {
     @Validated
     public static class NoosphereContainer {
 
-        // Getter/Setter methods
         @NotBlank
         private String id;
 
@@ -250,31 +249,18 @@ public class ApplicationProperties {
         private Integer port;
 
         @NotNull
-        private Boolean external = false;
-
-        @NotNull
         private Boolean gpu = false;
 
         @NotNull
         private Map<String, Integer> acceptedPayments = new HashMap<>();
 
-        @NotNull
-        private List<String> allowedIps = new ArrayList<>();
-
-        @NotNull
-        private List<String> allowedAddresses = new ArrayList<>();
-
-        @NotNull
-        private List<String> allowedDelegateAddresses = new ArrayList<>();
-
         private String description;
         private String command;
 
-        @NotNull
-        private Map<String, Object> env = new HashMap<>();
+        private String verifierAddress;
 
         @NotNull
-        private Boolean generatesProofs = false;
+        private Map<String, Object> env = new HashMap<>();
 
         @NotNull
         private List<String> volumes = new ArrayList<>();
