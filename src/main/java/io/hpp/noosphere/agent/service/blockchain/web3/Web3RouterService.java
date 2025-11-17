@@ -60,7 +60,7 @@ public class Web3RouterService {
 
     @PostConstruct
     public void init() {
-        ApplicationProperties.Chain chainConfig = noosphereConfigService.getActiveConfig().getChain();
+        ApplicationProperties.NoosphereConfig.Chain chainConfig = noosphereConfigService.getActiveConfig().getChain();
         String routerAddress = chainConfig.getRouterAddress();
 
         if (routerAddress == null || routerAddress.isEmpty()) {
@@ -205,7 +205,7 @@ public class Web3RouterService {
     private void loadContractAddresses() {
         try {
             // First load statically defined contracts from configuration file
-            ApplicationProperties.Chain chainConfig = noosphereConfigService.getActiveConfig().getChain();
+            ApplicationProperties.NoosphereConfig.Chain chainConfig = noosphereConfigService.getActiveConfig().getChain();
 
             if (chainConfig.getRouterAddress() != null && !chainConfig.getRouterAddress().isEmpty()) {
                 contractAddresses.put("Router", chainConfig.getRouterAddress());

@@ -43,7 +43,7 @@ public class HubKeepAliveService {
      */
     @Scheduled(fixedDelayString = "${application.noosphere.hub.keep-alive.interval-ms}")
     public void sendKeepAlive() {
-        ApplicationProperties.Hub hubConfig = applicationProperties.getNoosphere().getHub();
+        ApplicationProperties.NoosphereConfig.Hub hubConfig = applicationProperties.getNoosphere().getHub();
         if (hubConfig == null || !hubConfig.getKeepAlive().isEnabled() || agentService.getRegisteredAgent() == null) {
             // Keep-alive is disabled, do nothing.
             return;

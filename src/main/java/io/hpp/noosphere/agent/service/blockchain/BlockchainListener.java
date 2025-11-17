@@ -38,7 +38,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
     private final Web3SubscriptionBatchReaderService web3BatchReader;
     private final RequestValidatorService requestValidatorService;
     private final BlockChainService blockChainService;
-    private final ApplicationProperties.Chain properties;
+    private final ApplicationProperties.NoosphereConfig.Chain properties;
     private final ContainerLookupService containerLookupService;
 
     private final AtomicLong lastSyncedBlock = new AtomicLong(0);

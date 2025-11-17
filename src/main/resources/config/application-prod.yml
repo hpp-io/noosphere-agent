@@ -139,7 +139,6 @@ application:
       rpcUrl: ${BLOCKCHAIN_RPC_URL:}
       routerAddress: ${REGISTRY_ADDRESS:}
       wallet:
-        privateKey: ${WALLET_PRIVATE_KEY:}
         paymentAddress: ${PAYMENT_ADDRESS:}
 
     # Production Docker settings

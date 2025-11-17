@@ -35,8 +35,8 @@ public class ContainerManagerService {
     private Double startupWait;
     private Boolean managed;
     private DockerClient dockerClient;
-    private List<ApplicationProperties.NoosphereContainer> configs;
-    private ApplicationProperties.Docker credentials;
+    private List<ApplicationProperties.NoosphereConfig.NoosphereContainer> configs;
+    private ApplicationProperties.NoosphereConfig.Docker credentials;
 
     // Maps for dynamic port mapping
     private final Map<String, Integer> portMappings = new ConcurrentHashMap<>();
@@ -72,7 +72,7 @@ public class ContainerManagerService {
     }
 
     public List<String> getActiveContainers() {
-        return configs.stream().map(ApplicationProperties.NoosphereContainer::getId).collect(Collectors.toList());
+        return configs.stream().map(ApplicationProperties.NoosphereConfig.NoosphereContainer::getId).collect(Collectors.toList());
     }
 
     /**
@@ -185,7 +185,7 @@ public class ContainerManagerService {
     /**
      * Add container configuration
      */
-    public void addConfig(ApplicationProperties.NoosphereContainer config) {
+    public void addConfig(ApplicationProperties.NoosphereConfig.NoosphereContainer config) {
         if (configs == null) {
             configs = new ArrayList<>();
         }
@@ -193,7 +193,7 @@ public class ContainerManagerService {
         log.info("Added container config: {}", config.getId());
     }
 
-    public List<ApplicationProperties.NoosphereContainer> getConfigs() {
+    public List<ApplicationProperties.NoosphereConfig.NoosphereContainer> getConfigs() {
         return configs != null ? configs : new ArrayList<>();
     }
 
@@ -219,7 +219,7 @@ public class ContainerManagerService {
             .stream()
             .filter(config -> config.getId().equals(containerId))
             .findFirst()
-            .map(ApplicationProperties.NoosphereContainer::getPort)
+            .map(ApplicationProperties.NoosphereConfig.NoosphereContainer::getPort)
             .orElse(null);
     }
 
@@ -237,7 +237,7 @@ public class ContainerManagerService {
             .stream()
             .filter(config -> config.getId().equals(containerId))
             .findFirst()
-            .map(ApplicationProperties.NoosphereContainer::getUrl)
+            .map(ApplicationProperties.NoosphereConfig.NoosphereContainer::getUrl)
             .orElse(null);
     }
 
@@ -255,7 +255,7 @@ public class ContainerManagerService {
             .stream()
             .filter(config -> config.getId().equals(containerId))
             .findFirst()
-            .map(ApplicationProperties.NoosphereContainer::getBearer)
+            .map(ApplicationProperties.NoosphereConfig.NoosphereContainer::getBearer)
             .orElse(null);
     }
 
@@ -292,7 +292,7 @@ public class ContainerManagerService {
         }
 
         try {
-            for (ApplicationProperties.NoosphereContainer config : configs) {
+            for (ApplicationProperties.NoosphereConfig.NoosphereContainer config : configs) {
                 String containerName = "noosphere-" + config.getId();
 
                 if (!isContainerHealthy(containerName)) {
@@ -350,7 +350,7 @@ public class ContainerManagerService {
      * Pull images
      */
     private void pullImages() {
-        for (ApplicationProperties.NoosphereContainer config : configs) {
+        for (ApplicationProperties.NoosphereConfig.NoosphereContainer config : configs) {
             try {
                 log.info("Pulling image: {}", config.getImage());
                 dockerClient
@@ -370,7 +370,7 @@ public class ContainerManagerService {
      * Clean up existing containers
      */
     private void pruneContainers() {
-        for (ApplicationProperties.NoosphereContainer config : configs) {
+        for (ApplicationProperties.NoosphereConfig.NoosphereContainer config : configs) {
             String containerName = "noosphere-" + config.getId();
             try {
                 List<Container> existingContainers = dockerClient
@@ -393,7 +393,7 @@ public class ContainerManagerService {
      * Run containers
      */
     private void runContainers() {
-        for (ApplicationProperties.NoosphereContainer config : configs) {
+        for (ApplicationProperties.NoosphereConfig.NoosphereContainer config : configs) {
             try {
                 createAndStartContainer(config);
             } catch (Exception e) {
@@ -405,7 +405,7 @@ public class ContainerManagerService {
     /**
      * Create and start container (apply dynamic port mapping)
      */
-    private void createAndStartContainer(ApplicationProperties.NoosphereContainer config) {
+    private void createAndStartContainer(ApplicationProperties.NoosphereConfig.NoosphereContainer config) {
         String containerName = "noosphere-" + config.getId();
 
         try {
@@ -482,7 +482,7 @@ public class ContainerManagerService {
     /**
      * Update dynamic port mapping information
      */
-    private void updateDynamicPortMappings(ApplicationProperties.NoosphereContainer config, String containerId) {
+    private void updateDynamicPortMappings(ApplicationProperties.NoosphereConfig.NoosphereContainer config, String containerId) {
         try {
             InspectContainerResponse containerInfo = dockerClient.inspectContainerCmd(containerId).exec();
 
@@ -582,7 +582,7 @@ public class ContainerManagerService {
     /**
      * Restart container
      */
-    private void restartContainer(ApplicationProperties.NoosphereContainer config) {
+    private void restartContainer(ApplicationProperties.NoosphereConfig.NoosphereContainer config) {
         String containerName = "noosphere-" + config.getId();
 
         try {
@@ -617,7 +617,7 @@ public class ContainerManagerService {
     /**
      * Force recreate container (remove existing container and create new one)
      */
-    private void recreateContainer(ApplicationProperties.NoosphereContainer config) {
+    private void recreateContainer(ApplicationProperties.NoosphereConfig.NoosphereContainer config) {
         restartContainer(config); // Currently uses the same logic as restart
     }
 

@@ -268,11 +268,15 @@ application:
       routerAddress: '${REGISTRY_ADDRESS:}'
       wallet:
         maxGasLimit: 1000000
-        privateKey: '${WALLET_PRIVATE_KEY:}'
         paymentAddress: '${PAYMENT_ADDRESS:}'
         allowedSimErrors:
           - 'execution reverted'
           - 'out of gas'
+        keystore:
+          path: '${HPP_KEYSTORE_PATH}'
+          password: '${HPP_KEYSTORE_PASSWORD}'
+          keys:
+            eth: '${HPP_ETH_KEY_ALIAS}'
       snapshotSync:
         sleep: 1
         batchSize: 100
