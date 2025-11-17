@@ -387,7 +387,6 @@ public class ComputationService {
             .input(InlineDataDTO.builder().value(inputHex).build())
             .output(InlineDataDTO.builder().value(outputHex).build())
             .delegatedSubscription(InlineDataDTO.builder().value(subscriptionHex).build())
-            .timestamp(Instant.now().getEpochSecond())
             .build();
     }
 }

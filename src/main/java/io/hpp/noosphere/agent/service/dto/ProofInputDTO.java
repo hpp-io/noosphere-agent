@@ -12,5 +12,4 @@ public class ProofInputDTO {
     private InlineDataDTO delegatedSubscription;
     private InlineDataDTO input;
     private InlineDataDTO output;
-    private long timestamp;
 }
