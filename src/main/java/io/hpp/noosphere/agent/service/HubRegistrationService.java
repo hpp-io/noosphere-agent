@@ -46,7 +46,7 @@ public class HubRegistrationService {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void registerWithHubOnStartup() {
-        ApplicationProperties.Hub hubConfig = noosphereConfig.getHub();
+        ApplicationProperties.NoosphereConfig.Hub hubConfig = noosphereConfig.getHub();
         if (hubConfig == null || !hubConfig.getRegister()) {
             log.info("Hub registration is disabled in the configuration.");
             return;
@@ -93,7 +93,7 @@ public class HubRegistrationService {
      * Registers the agent by sending its information to the hub via a POST request.
      */
     private void registerNewAgent(String hubUrl, String agentAddress) {
-        ApplicationProperties.Agent agentConfig = noosphereConfig.getAgent();
+        ApplicationProperties.NoosphereConfig.Agent agentConfig = noosphereConfig.getAgent();
 
         if (agentConfig.getApiKey() == null || agentConfig.getEmail() == null) {
             log.warn("Agent's name, apiKey, or email is not configured. Skipping hub registration.");

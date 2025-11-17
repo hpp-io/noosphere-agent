@@ -16,6 +16,8 @@ public final class Constants {
 
     public static final String ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+    public static final String KEYSTORE_TYPE = "PKCS12";
+
     public static final String FULL_DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
     public static final String KAKAO_PAY_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     public static final String TOSS_PAY_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";

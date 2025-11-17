@@ -121,7 +121,6 @@ application:
     chain:
       routerAddress: '0x1234567890123456789012345678901234567890'
       wallet:
-        privateKey: '${WALLET_PRIVATE_KEY:dev-private-key}'
         paymentAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
 
     # 개발 환경 Docker 설정

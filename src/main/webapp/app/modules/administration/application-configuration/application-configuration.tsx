@@ -38,7 +38,6 @@ export const ApplicationConfiguration = () => {
       routerAddress: '',
       wallet: {
         maxGasLimit: 1000000,
-        privateKey: '',
         paymentAddress: '',
         allowedSimErrors: [],
       },

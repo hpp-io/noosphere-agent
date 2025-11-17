@@ -293,11 +293,11 @@ public class ComputationService {
      */
     public CompletableFuture<Map<String, Map<String, Object>>> collectServiceResources(Optional<String> modelId) {
         ParameterizedTypeReference<Map<String, Object>> mapType = new ParameterizedTypeReference<Map<String, Object>>() {};
-        List<ApplicationProperties.NoosphereContainer> configs = containerManager.getConfigs();
+        List<ApplicationProperties.NoosphereConfig.NoosphereContainer> configs = containerManager.getConfigs();
 
         Map<String, CompletableFuture<Map<String, Object>>> futures = new HashMap<>();
 
-        for (ApplicationProperties.NoosphereContainer config : configs) {
+        for (ApplicationProperties.NoosphereConfig.NoosphereContainer config : configs) {
             String url = modelId
                 .map(id -> String.format("http://%s:%d/service-resources?model_id=%s", host, config.getPort(), id))
                 .orElse(String.format("http://%s:%d/service-resources", host, config.getPort()));

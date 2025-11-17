@@ -16,7 +16,6 @@
     "routerAddress": "",
     "wallet": {
       "maxGasLimit": 1000000,
-      "privateKey": "",
       "paymentAddress": "",
       "allowedSimErrors": ["execution reverted", "out of gas"]
     },

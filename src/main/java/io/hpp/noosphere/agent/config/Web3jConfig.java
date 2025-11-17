@@ -1,6 +1,7 @@
 package io.hpp.noosphere.agent.config;
 
 import io.hpp.noosphere.agent.service.NoosphereConfigService;
+import io.hpp.noosphere.agent.service.blockchain.KeystoreService;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.concurrent.TimeUnit;
@@ -28,11 +29,11 @@ public class Web3jConfig {
 
     @Bean
     public Web3j web3j() {
-        ApplicationProperties.Chain chainConfig = noosphereConfigService.getActiveConfig().getChain();
+        ApplicationProperties.NoosphereConfig.Chain chainConfig = noosphereConfigService.getActiveConfig().getChain();
         String rpcUrl = chainConfig.getRpcUrl();
 
         // null-safe한 방식으로 timeout 값들 가져오기
-        ApplicationProperties.ConnectionConfig connection = chainConfig.getConnection();
+        ApplicationProperties.NoosphereConfig.Chain.ConnectionConfig connection = chainConfig.getConnection();
 
         int connectTimeout = getTimeoutValue(connection != null ? connection.getTimeout() : null, DEFAULT_CONNECT_TIMEOUT);
         int readTimeout = getTimeoutValue(connection != null ? connection.getReadTimeout() : null, DEFAULT_READ_TIMEOUT);
@@ -55,8 +56,13 @@ public class Web3jConfig {
     }
 
     @Bean
-    public Credentials credentials() {
-        return Credentials.create(noosphereConfigService.getActiveConfig().getChain().getWallet().getPrivateKey());
+    public Credentials credentials(KeystoreService keystoreService) {
+        String keyAlias = noosphereConfigService.getActiveConfig().getChain().getWallet().getKeystore().getKeys().getEth();
+        if (keyAlias == null || keyAlias.isBlank()) {
+            throw new IllegalStateException("Ethereum key alias 'application.chain.wallet.keystore.keys.eth' is not configured.");
+        }
+        // Delegate credential loading to the centralized KeystoreService
+        return keystoreService.getCredentials(keyAlias);
     }
 
     @Bean
@@ -66,9 +72,9 @@ public class Web3jConfig {
 
     public static class CustomGasProvider extends DefaultGasProvider {
 
-        private final ApplicationProperties.GasConfig gasConfig;
+        private final ApplicationProperties.NoosphereConfig.Chain.GasConfig gasConfig;
 
-        public CustomGasProvider(ApplicationProperties.GasConfig gasConfig) {
+        public CustomGasProvider(ApplicationProperties.NoosphereConfig.Chain.GasConfig gasConfig) {
             this.gasConfig = gasConfig;
         }
 

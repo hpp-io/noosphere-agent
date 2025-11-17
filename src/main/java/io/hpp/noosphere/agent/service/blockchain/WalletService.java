@@ -31,7 +31,7 @@ public class WalletService {
 
     private final Web3j web3j;
     private final Web3DelegateeCoordinatorService coordinatorService;
-    private final ApplicationProperties.Wallet walletProperties;
+    private final ApplicationProperties.NoosphereConfig.Chain.Wallet walletProperties;
     private final Credentials credentials;
     private final TransactionManager transactionManager;
     private final TransactionReceiptProcessor transactionReceiptProcessor;
@@ -43,16 +43,13 @@ public class WalletService {
         Web3j web3j,
         Web3DelegateeCoordinatorService coordinatorService,
         NoosphereConfigService noosphereConfigService,
+        Credentials credentials,
         BigInteger chainId
     ) throws IOException {
         walletProperties = noosphereConfigService.getActiveConfig().getChain().getWallet();
-
-        if (walletProperties.getPrivateKey() == null || !walletProperties.getPrivateKey().startsWith("0x")) {
-            throw new IllegalArgumentException("Private key must be provided and be 0x-prefixed.");
-        }
         this.coordinatorService = coordinatorService;
         this.web3j = web3j;
-        this.credentials = Credentials.create(walletProperties.getPrivateKey());
+        this.credentials = credentials;
         this.transactionManager = new RawTransactionManager(web3j, credentials, chainId.longValue());
         this.transactionReceiptProcessor = new PollingTransactionReceiptProcessor(web3j, 1000, 15); // Poll every 1s, 15 attempts
 
