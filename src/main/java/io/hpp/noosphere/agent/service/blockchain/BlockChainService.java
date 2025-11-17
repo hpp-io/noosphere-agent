@@ -332,7 +332,8 @@ public class BlockChainService {
                 List.of(subscription.getContainerId()),
                 subscription.hasVerifier(),
                 requestId,
-                commitment
+                commitment,
+                delegated ? delegatedParams.subscription() : null
             )
         );
     }

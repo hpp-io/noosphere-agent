@@ -3,6 +3,7 @@ package io.hpp.noosphere.agent.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hpp.noosphere.agent.config.ApplicationProperties;
+import io.hpp.noosphere.agent.contracts.DelegateeCoordinator;
 import io.hpp.noosphere.agent.exception.ContainerException;
 import io.hpp.noosphere.agent.service.dto.*;
 import io.hpp.noosphere.agent.service.dto.enumeration.ComputationLocation;
@@ -79,7 +80,8 @@ public class ComputationService {
         Optional<OffchainRequestDTO> request,
         Boolean requiresProof,
         byte[] requestId,
-        byte[] commitment
+        byte[] commitment,
+        SubscriptionDTO subscriptionDTO
     ) {
         return CompletableFuture.supplyAsync(() -> {
             // 작업 시작
@@ -135,17 +137,20 @@ public class ComputationService {
 
                     // If proof is required, prepare and call the verifier container
                     if (
-                        computationInput.getSource().equals(ComputationLocation.ON_CHAIN.toString()) &&
+                        computationInput.getDestination().equals(ComputationLocation.ON_CHAIN.toString()) &&
                         requiresProof &&
                         index == containers.size() - 1
                     ) {
                         log.info("Proof generation required. Preparing input for verifier.");
+
+                        boolean isOffChain = computationInput.getSource().equals(ComputationLocation.OFF_CHAIN.toString());
                         // This is where you would construct the proof input
                         ProofInputDTO proofInput = buildProofInput(
-                            requestId, // Assuming requestId is passed in data
-                            commitment,
-                            computationInput.getData(), // Assuming original input is passed
-                            response
+                            isOffChain ? null : requestId,
+                            isOffChain ? null : commitment,
+                            computationInput.getData(),
+                            response,
+                            isOffChain ? subscriptionDTO.toCoordinatorComputeSubscription() : null
                         );
 
                         // You would then call the verifier container with `proofInput`
@@ -198,9 +203,19 @@ public class ComputationService {
         List<String> containers,
         boolean requiresProof,
         byte[] requestId,
-        byte[] commitment
+        byte[] commitment,
+        SubscriptionDTO subscription
     ) {
-        return runComputation(ComputationId, ComputationInput, containers, Optional.empty(), requiresProof, requestId, commitment);
+        return runComputation(
+            ComputationId,
+            ComputationInput,
+            containers,
+            Optional.empty(),
+            requiresProof,
+            requestId,
+            commitment,
+            subscription
+        );
     }
 
     /**
@@ -219,6 +234,7 @@ public class ComputationService {
             request.getContainers(),
             Optional.of(request),
             request.getRequiresProof(),
+            null,
             null,
             null
         ).thenApply(results -> null);
@@ -344,11 +360,17 @@ public class ComputationService {
     /**
      * Helper method to build the input DTO for the proof generation/verification container.
      */
-    private ProofInputDTO buildProofInput(byte[] requestId, byte[] commitment, Map<String, Object> Input, Map<String, Object> output)
-        throws JsonProcessingException {
+    private ProofInputDTO buildProofInput(
+        byte[] requestId,
+        byte[] commitment,
+        Map<String, Object> Input,
+        Map<String, Object> output,
+        DelegateeCoordinator.ComputeSubscription subscription
+    ) throws JsonProcessingException {
         // Convert byte arrays and strings to hex strings, similar to ethers.hexlify
         String requestIdHex = Numeric.toHexString(requestId);
         String commitmentHex = Numeric.toHexString(commitment);
+
         String inputString = new ObjectMapper().writeValueAsString(Input);
         String inputHex = Numeric.toHexString(inputString.getBytes(StandardCharsets.UTF_8));
 
@@ -356,11 +378,15 @@ public class ComputationService {
         String outputString = new ObjectMapper().writeValueAsString(output);
         String outputHex = Numeric.toHexString(outputString.getBytes(StandardCharsets.UTF_8));
 
+        String subscriptionString = new ObjectMapper().writeValueAsString(subscription);
+        String subscriptionHex = Numeric.toHexString(subscriptionString.getBytes(StandardCharsets.UTF_8));
+
         return ProofInputDTO.builder()
             .requestId(requestIdHex)
             .commitment(InlineDataDTO.builder().value(commitmentHex).build())
             .input(InlineDataDTO.builder().value(inputHex).build())
             .output(InlineDataDTO.builder().value(outputHex).build())
+            .delegatedSubscription(InlineDataDTO.builder().value(subscriptionHex).build())
             .timestamp(Instant.now().getEpochSecond())
             .build();
     }
