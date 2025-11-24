@@ -18,7 +18,7 @@ public class NoosphereConfigLoader {
 
     private static final Logger LOG = LoggerFactory.getLogger(NoosphereConfigLoader.class);
 
-    @Value("${application.noosphere.configFilePath}")
+    @Value("${application.noosphere.config-file-path}")
     private String configFileName;
 
     private final ObjectMapper objectMapper;

@@ -107,7 +107,7 @@ public class ApplicationProperties {
         private Agent agent;
 
         @Valid
-        @JsonProperty("Hub")
+        @JsonProperty("hub")
         @NestedConfigurationProperty
         private Hub hub;
 
@@ -207,7 +207,7 @@ public class ApplicationProperties {
             @Validated
             public static class SnapshotSync {
 
-                private Long sleep = (long) 1.0;
+                private Long sleep = 1L;
                 private Integer batchSize = 100;
                 private Integer startingSubId = 0;
                 private String syncPeriod = "3000";
@@ -299,9 +299,9 @@ public class ApplicationProperties {
             @Getter
             public static class KeepAlive {
 
-                private boolean enabled;
-                private long intervalMs = 60000; // Default to 1 minute
-                private long batchSize = 100;
+                private Boolean enabled = true;
+                private Long intervalMs = 60000L; // Default to 1 minute
+                private Long batchSize = 100L;
             }
         }
 
@@ -310,7 +310,6 @@ public class ApplicationProperties {
         public static class Agent {
 
             private String name;
-            private String publicEndpoint;
             private String apiKey;
             private String email;
         }

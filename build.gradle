@@ -48,6 +48,8 @@ apply from: "gradle/liquibase.gradle"
 
 if (project.hasProperty("prod")) {
     apply from: "gradle/profile_prod.gradle"
+} else if (project.hasProperty("test")) {
+    apply from: "gradle/profile_test.gradle"
 } else {
     apply from: "gradle/profile_dev.gradle"
 }
@@ -213,11 +215,11 @@ ext {
     }
 }
 
-task generateWeb3jWrappers {
+tasks.register('generateWeb3jWrappers') {
     description = 'Generate Web3j contract wrappers from selected Foundry artifacts'
     group = 'build'
 
-    def foundryOutDir = file("./contract/out")
+    def foundryOutDir = file("../noosphere-evm/out")
     def outputDir = file("src/main/java")
     def packageName = "io.hpp.noosphere.agent.contracts"
     def tempDir = file("build/tmp/web3j")
@@ -338,12 +340,12 @@ def generateWrapper(String contractName, File abiFile, File binFile, File output
 }
 
 selectedContracts.each { contractName ->
-    task "generate${contractName}Wrapper" {
+    tasks.register("generate${contractName}Wrapper") {
         description = "Generate Web3j wrapper for ${contractName} contract only"
         group = 'web3j'
 
         doLast {
-            def foundryOutDir = file("./contract/out")
+            def foundryOutDir = file("../noosphere-evm/out")
             def outputDir = file("src/main/java/io/hpp/noosphere/agent/web3j/contracts")
             def packageName = "io.hpp.noosphere.agent.web3j.contracts"
             def tempDir = file("build/tmp/web3j")
@@ -370,12 +372,12 @@ selectedContracts.each { contractName ->
     }
 }
 
-task listFoundryContracts {
+tasks.register('listFoundryContracts') {
     description = 'List all available contracts from Foundry build output'
     group = 'web3j'
 
     doLast {
-        def foundryOutDir = file("./contract/out")
+        def foundryOutDir = file("../noosphere-evm/out")
 
         if (!foundryOutDir.exists()) {
             println "Foundry output directory not found. Run 'forge build' first."
@@ -387,13 +389,6 @@ task listFoundryContracts {
     }
 }
 
-//generateWeb3jWrappers.dependsOn buildFoundryContracts
-//compileJava.dependsOn generateWeb3jWrappers
-
-
-task cleanResources(type: Delete) {
+tasks.register('cleanResources', Delete) {
     delete "build/resources"
 }
-
-compileJava.dependsOn processResources
-processResources.dependsOn bootBuildInfo

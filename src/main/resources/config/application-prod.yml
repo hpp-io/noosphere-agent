@@ -122,26 +122,3 @@ jhipster:
 # ===================================================================
 
 application:
-  noosphere:
-    # Production environment specific settings
-    startupWait: 10.0 # Longer startup wait for production
-
-    # Production server settings
-    server:
-      port: ${SERVER_PORT:8080}
-      rateLimit:
-        numRequests: ${RATE_LIMIT_REQUESTS:100}
-        period: ${RATE_LIMIT_PERIOD:60}
-
-    # Production blockchain settings
-    chain:
-      enabled: ${BLOCKCHAIN_ENABLED:true}
-      rpcUrl: ${BLOCKCHAIN_RPC_URL:}
-      routerAddress: ${REGISTRY_ADDRESS:}
-      wallet:
-        paymentAddress: ${PAYMENT_ADDRESS:}
-
-    # Production Docker settings
-    docker:
-      username: ${DOCKER_USERNAME:}
-      password: ${DOCKER_PASSWORD:}
