@@ -270,15 +270,6 @@ public class Web3DelegateeCoordinatorService {
             .encodeFunctionCall();
     }
 
-    public CompletableFuture<TransactionReceipt> reportVerificationResult(
-        BigInteger subscriptionId,
-        BigInteger interval,
-        String node,
-        Boolean valid
-    ) {
-        return checkContractLoaded().thenCompose(c -> c.reportVerificationResult(subscriptionId, interval, node, valid).sendAsync());
-    }
-
     public CompletableFuture<TransactionReceipt> setSubscriptionBatchReader(String reader) {
         return checkContractLoaded().thenCompose(c -> c.setSubscriptionBatchReader(reader).sendAsync());
     }
@@ -444,12 +435,6 @@ public class Web3DelegateeCoordinatorService {
 
     public CompletableFuture<Boolean> hasNodeResponded(byte[] requestId) {
         return checkContractLoaded().thenCompose(c -> c.nodeResponded(requestId).sendAsync());
-    }
-
-    public CompletableFuture<Tuple8<BigInteger, byte[], String, String, BigInteger, String, BigInteger, BigInteger>> getProofRequest(
-        byte[] proofId
-    ) {
-        return checkContractLoaded().thenCompose(c -> c.proofRequests(proofId).sendAsync());
     }
 
     public CompletableFuture<BigInteger> getRedundancyCount(byte[] requestId) {
