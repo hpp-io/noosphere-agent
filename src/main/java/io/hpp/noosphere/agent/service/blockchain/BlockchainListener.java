@@ -94,7 +94,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
     /**
      * Core processing loop.
      */
-    @Scheduled(fixedDelayString = "${application.noosphere.chain.snapshotSync.syncPeriod}")
+    @Scheduled(fixedDelayString = "${application.noosphere.chain.snapshot-sync.sync-period}")
     public void subscriptionSyncLoop() {
         if (isSnapshotSyncing.get()) {
             return; // Don't run if shutting down or initial sync is in progress
