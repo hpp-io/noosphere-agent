@@ -2,11 +2,9 @@ package io.hpp.noosphere.agent.service;
 
 import io.hpp.noosphere.agent.config.ApplicationProperties;
 import io.hpp.noosphere.agent.service.blockchain.BlockChainService;
-import io.hpp.noosphere.agent.service.blockchain.WalletService;
 import io.hpp.noosphere.agent.service.dto.DelegatedRequestDTO;
 import io.hpp.noosphere.agent.service.dto.KeepAliveResponseDTO;
 import io.hpp.noosphere.agent.service.util.CommonUtil;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,22 +17,20 @@ public class HubKeepAliveService {
     private static final Logger log = LoggerFactory.getLogger(HubKeepAliveService.class);
 
     private final ApplicationProperties applicationProperties;
-    private final WalletService walletService;
     private final RestTemplate restTemplate;
     private final AgentService agentService;
     private final BlockChainService blockChainService;
 
     public HubKeepAliveService(
         ApplicationProperties applicationProperties,
-        WalletService walletService,
+        RestTemplate restTemplate,
         AgentService agentService,
         BlockChainService blockChainService
     ) {
         this.applicationProperties = applicationProperties;
-        this.walletService = walletService;
+        this.restTemplate = restTemplate;
         this.agentService = agentService;
         this.blockChainService = blockChainService;
-        this.restTemplate = new RestTemplate();
     }
 
     /**

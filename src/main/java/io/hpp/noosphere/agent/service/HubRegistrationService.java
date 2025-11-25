@@ -31,13 +31,14 @@ public class HubRegistrationService {
     public HubRegistrationService(
         NoosphereConfigService noosphereConfigService,
         WalletService walletService,
+        RestTemplate restTemplate,
         AgentService agentService,
         ApplicationContext applicationContext
     ) {
         this.noosphereConfig = noosphereConfigService.getActiveConfig();
         this.walletService = walletService;
+        this.restTemplate = restTemplate;
         this.agentService = agentService;
-        this.restTemplate = new RestTemplate();
         this.applicationContext = applicationContext;
     }
 
