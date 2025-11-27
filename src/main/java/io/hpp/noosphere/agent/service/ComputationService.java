@@ -10,7 +10,6 @@ import io.hpp.noosphere.agent.service.dto.enumeration.ComputationLocation;
 import io.hpp.noosphere.agent.service.dto.enumeration.ContainerStatus;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
@@ -45,13 +44,13 @@ public class ComputationService {
     /**
      * 컨테이너의 서비스 URL을 가져옵니다
      */
-    private String getContainerUrl(String container) {
+    private String getContainerUrl(String container, boolean isProof) {
         String containerUrl = containerManager.getUrl(container);
         if (containerUrl != null && !containerUrl.isEmpty()) {
-            return containerUrl + "/service_output";
+            return containerUrl + (isProof ? "/service_output" : "/computation");
         } else {
             int port = containerManager.getPort(container);
-            return String.format("http://%s:%d/service_output", host, port);
+            return String.format("http://%s:%d" + (isProof ? "/service_output" : "/computation"), host, port);
         }
     }
 
@@ -68,6 +67,20 @@ public class ComputationService {
         }
 
         return headers;
+    }
+
+    /**
+     * Extracts the 'hex_data' byte array from the input map and decodes it into a UTF-8 string.
+     */
+    private String decodeInputDataToString(Map<String, Object> data) {
+        if (data == null) {
+            return "";
+        }
+        Object hexData = data.get("hex_data");
+        if (hexData instanceof byte[]) {
+            return new String((byte[]) hexData, StandardCharsets.UTF_8);
+        }
+        return "";
     }
 
     /**
@@ -97,11 +110,12 @@ public class ComputationService {
                 .requiresProof(requiresProof)
                 .build();
 
+            log.debug("Initial input.data (decoded): {}", decodeInputDataToString(computationInput.getData()));
             // 컨테이너 체인 실행
             for (int index = 0; index < (requiresProof ? containers.size() + 1 : containers.size()); index++) {
                 String container = containers.get(index);
-                log.debug("container id: {}", container);
-                String url = getContainerUrl(container);
+                log.debug("container id: {}, input.data: {}", container, decodeInputDataToString(inputData.getData()));
+                String url = getContainerUrl(container, false);
                 Map<String, String> headers = getHeaders(container);
 
                 try {
@@ -111,14 +125,14 @@ public class ComputationService {
                         .uri(url)
                         .headers(httpHeaders -> headers.forEach(httpHeaders::set))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(inputData.getData() != null ? inputData.getData() : Collections.emptyMap())
+                        .bodyValue(inputData.getData() != null ? decodeInputDataToString(inputData.getData()) : Collections.emptyMap())
                         .retrieve()
                         .bodyToMono(Map.class)
                         .timeout(Duration.ofMinutes(3))
                         .block();
-
                     // 성공 결과 추가
                     results.add(new ContainerOutputDTO(container, response, null));
+                    log.info("ComputationId={}, container={}, inputData={}, result=", ComputationId, container, computationInput, response);
                     dataStoreService.trackContainerStatus(container, ContainerStatus.SUCCESS);
 
                     // 다음 컨테이너를 위한 입력 데이터 준비
@@ -153,13 +167,14 @@ public class ComputationService {
                             isOffChain ? subscriptionDTO.toCoordinatorComputeSubscription() : null
                         );
 
+                        String proofurl = getContainerUrl(container, true);
                         // You would then call the verifier container with `proofInput`
                         // For now, we just log it.
                         log.debug("Proof Input DTO: {}", proofInput);
 
                         String proofResponse = webClient
                             .post()
-                            .uri(url)
+                            .uri(proofurl)
                             .headers(httpHeaders -> headers.forEach(httpHeaders::set))
                             .contentType(MediaType.APPLICATION_JSON)
                             .bodyValue(proofInput)
@@ -179,7 +194,13 @@ public class ComputationService {
                     ContainerErrorDTO error = new ContainerErrorDTO(container, e.getMessage());
                     results.add(error);
 
-                    log.error("Container error: ComputationId={}, container={}, error={}", ComputationId, container, e.getMessage());
+                    log.error(
+                        "Container error: ComputationId={}, container={}, inputData={} error={}",
+                        ComputationId,
+                        container,
+                        computationInput.getData(),
+                        e.getMessage()
+                    );
 
                     // 실패 상태 추적
                     request.ifPresent(req -> dataStoreService.setFailed(req, results));
@@ -246,7 +267,7 @@ public class ComputationService {
     public Flux<byte[]> processStreamingComputation(OffchainRequestDTO request) {
         // 스트리밍은 첫 번째 컨테이너만 사용
         String container = request.getContainers().get(0);
-        String url = getContainerUrl(container);
+        String url = getContainerUrl(container, false);
         Map<String, String> headers = getHeaders(container);
 
         // 작업 시작

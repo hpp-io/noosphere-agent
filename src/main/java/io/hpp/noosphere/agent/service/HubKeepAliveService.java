@@ -7,6 +7,9 @@ import io.hpp.noosphere.agent.service.dto.KeepAliveResponseDTO;
 import io.hpp.noosphere.agent.service.util.CommonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -52,8 +55,14 @@ public class HubKeepAliveService {
         try {
             log.debug("Sending keep-alive ping to hub for agent {}", agentId);
 
-            // Send a POST request and expect a KeepAliveResponseDTO
-            KeepAliveResponseDTO response = restTemplate.postForObject(keepAliveUrl, null, KeepAliveResponseDTO.class);
+            // Send a PUT request as this is an update of the agent's state.
+            ResponseEntity<KeepAliveResponseDTO> responseEntity = restTemplate.exchange(
+                keepAliveUrl,
+                HttpMethod.PUT,
+                HttpEntity.EMPTY,
+                KeepAliveResponseDTO.class
+            );
+            KeepAliveResponseDTO response = responseEntity.getBody();
 
             if (response != null && CommonUtil.isValid(response.getCount()) && response.getCount() > 0) {
                 log.info("Successfully sent keep-alive signal for agent {}. Hub subscription count: {}.", agentId, response.getCount());
