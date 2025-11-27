@@ -20,6 +20,9 @@ services:
       - /data/noosphere/config/config.json:/app/config.json
       - /data/noosphere/config/keystore9.p12:/app/keystore9.p12
       - /data/noosphere/logs/agent-logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - ${HPP_DOCKER_GROUP}
     depends_on:
       postgresql:
         condition: service_healthy
