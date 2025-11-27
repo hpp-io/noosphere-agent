@@ -5,7 +5,7 @@ services:
     image: ghcr.io/hpp-io/noosphere-agent:test
     environment:
       - _JAVA_OPTIONS=-Xmx512m -Xms256m
-      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_PROFILES_ACTIVE=test
       - MANAGEMENT_PROMETHEUS_METRICS_EXPORT_ENABLED=true
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/noosphereAgent
       - SPRING_LIQUIBASE_URL=jdbc:postgresql://postgresql:5432/noosphereAgent
