@@ -11,6 +11,7 @@ services:
       - SPRING_LIQUIBASE_URL=jdbc:postgresql://postgresql:5432/noosphereAgent
       - APPLICATION_NOOSPHERE_CONFIG_FILE_PATH=/app/config.json
       - HPP_KEYSTORE_PATH=/app/keystore9.12
+      - LOGGING_FILE_PATH=/app/logs
     ports:
       - 127.0.0.1:8080:8080
     extra_hosts:
@@ -18,7 +19,7 @@ services:
     volumes:
       - /data/noosphere/config/config.json:/app/config.json
       - /data/noosphere/config/keystore9.p12:/app/keystore9.p12
-      - /data/noosphere/logs/scheduler-logs:/app/logs
+      - /data/noosphere/logs/agent-logs:/app/logs
     depends_on:
       postgresql:
         condition: service_healthy
