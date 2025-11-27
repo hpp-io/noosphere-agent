@@ -5,7 +5,8 @@ import io.hpp.noosphere.agent.service.blockchain.WalletService;
 import io.hpp.noosphere.agent.service.dto.AgentDTO;
 import io.hpp.noosphere.agent.service.dto.AgentRegistrationDTO;
 import io.hpp.noosphere.agent.service.util.CommonUtil;
-import java.util.concurrent.CompletableFuture;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -27,6 +28,7 @@ public class HubRegistrationService {
     private final ApplicationProperties.NoosphereConfig noosphereConfig;
     private final AgentService agentService;
     private final ApplicationContext applicationContext;
+    private final AtomicBoolean registrationInProgress = new AtomicBoolean(false);
 
     public HubRegistrationService(
         NoosphereConfigService noosphereConfigService,
@@ -46,23 +48,32 @@ public class HubRegistrationService {
      * Starts the hub registration process once the application is ready.
      */
     @EventListener(ApplicationReadyEvent.class)
-    public void registerWithHubOnStartup() {
+    public synchronized void registerWithHubOnStartup() {
+        // Ensure this logic runs only once.
+        if (registrationInProgress.getAndSet(true)) {
+            log.info("Registration process is already in progress or has been completed. Skipping.");
+            return;
+        }
+
         ApplicationProperties.NoosphereConfig.Hub hubConfig = noosphereConfig.getHub();
         if (hubConfig == null || !hubConfig.getRegister()) {
             log.info("Hub registration is disabled in the configuration.");
             return;
         }
 
-        CompletableFuture.runAsync(this::checkAndRegister).join();
+        // Fetch only the first agent from the database to check for registration.
+        Optional<AgentDTO> registeredAgentOpt = agentService.findFirst();
+        agentService.setRegisteredAgent(registeredAgentOpt.orElse(null));
+
+        this.checkAndRegister(registeredAgentOpt.orElse(null));
     }
 
     /**
      * Checks if the agent is already registered with the hub,
      * and if not, attempts a new registration.
      */
-    private void checkAndRegister() {
+    private synchronized void checkAndRegister(AgentDTO registeredAgent) {
         String hubUrl = noosphereConfig.getHub().getUrl();
-        AgentDTO registeredAgent = agentService.getRegisteredAgent();
 
         try {
             // 1. Check if the agent is already registered with the hub.

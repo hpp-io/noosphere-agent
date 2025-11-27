@@ -28,34 +28,34 @@ public class Agent implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @NotNull
     @Id
-    @GeneratedValue
-    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "id", length = 36, nullable = false)
     private UUID id;
 
     @Column(name = "name")
     private String name;
 
-    @Size(max = 1024)
-    @Column(name = "api_url", length = 1024, nullable = false)
-    private String apiUrl;
+    @Column(name = "wallet_address", nullable = false)
+    private String walletAddress;
 
-    @NotNull
-    @Column(name = "api_key", nullable = false)
-    private String apiKey;
+    @Column(name = "status_code", length = 20, nullable = false)
+    @Enumerated(EnumType.STRING)
+    private StatusCode statusCode;
 
     @Lob
     @Column(name = "description")
     private String description;
 
-    @NotNull
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = Instant.now();
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -80,8 +80,8 @@ public class Agent implements Serializable {
         return "Agent{" +
             "id=" + getId() +
             ", name='" + getName() + "'" +
-            ", apiUrl='" + getApiUrl() + "'" +
-            ", apiKey='" + getApiKey() + "'" +
+            ", walletAddress='" + getWalletAddress() + "'" +
+            ", statusCode='" + getStatusCode() + "'" +
             ", description='" + getDescription() + "'" +
             ", createdAt='" + getCreatedAt() + "'" +
             ", updatedAt='" + getUpdatedAt() + "'" +

@@ -27,11 +27,9 @@ public class AgentDTO implements Serializable {
 
     private String name;
 
-    @Size(max = 1024)
-    private String apiUrl;
+    private String walletAddress;
 
-    @NotNull
-    private String apiKey;
+    private StatusCode statusCode;
 
     @Lob
     private String description;
@@ -39,10 +37,6 @@ public class AgentDTO implements Serializable {
     private Instant createdAt;
 
     private Instant updatedAt;
-
-    private UserDTO createdByUser;
-
-    private UserDTO updatedByUser;
 
     @Override
     public boolean equals(Object o) {
@@ -67,13 +61,11 @@ public class AgentDTO implements Serializable {
         return new ToStringBuilder(this)
             .append("id", id)
             .append("name", name)
-            .append("apiUrl", apiUrl)
-            .append("apiKey", apiKey)
+            .append("walletAddress", walletAddress)
+            .append("statusCode", statusCode)
             .append("description", description)
             .append("createdAt", createdAt)
             .append("updatedAt", updatedAt)
-            .append("createdByUser", createdByUser != null ? createdByUser.getId() : null)
-            .append("updatedByUser", updatedByUser != null ? updatedByUser.getId() : null)
             .toString();
     }
 }
