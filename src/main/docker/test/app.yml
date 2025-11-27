@@ -5,14 +5,17 @@ services:
     image: ghcr.io/hpp-io/noosphere-agent:test
     environment:
       - _JAVA_OPTIONS=-Xmx512m -Xms256m
-      - SPRING_PROFILES_ACTIVE=test
+      - SPRING_PROFILES_ACTIVE=dev
       - MANAGEMENT_PROMETHEUS_METRICS_EXPORT_ENABLED=true
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/noosphereAgent
       - SPRING_LIQUIBASE_URL=jdbc:postgresql://postgresql:5432/noosphereAgent
     ports:
       - 127.0.0.1:8080:8080
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     volumes:
       - ./config.json:/config.json
+      - ./keystore9.p12:/keystore9.p12
     depends_on:
       postgresql:
         condition: service_healthy

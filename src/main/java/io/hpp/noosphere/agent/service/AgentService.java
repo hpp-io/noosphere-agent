@@ -84,6 +84,8 @@ public class AgentService {
                 // 새 엔티티 생성
                 log.info("Creating new agent with ID: {}", agentDTO.getId());
                 agentToSave = agentMapper.toEntity(agentDTO);
+                // Manually set the ID as it's not generated and might not be mapped correctly.
+                agentToSave.setId(agentDTO.getId());
             }
 
             // 직접 repository.save() 호출 (save() 메소드를 거치지 않음)
