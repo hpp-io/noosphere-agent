@@ -1,6 +1,9 @@
 package io.hpp.noosphere.agent.service.blockchain;
 
+import static io.hpp.noosphere.agent.service.util.CommonUtil.decodeInputDataToString;
+
 import io.hpp.noosphere.agent.service.ComputationService;
+import io.hpp.noosphere.agent.service.ContainerLookupService;
 import io.hpp.noosphere.agent.service.blockchain.dto.*;
 import io.hpp.noosphere.agent.service.dto.*;
 import io.hpp.noosphere.agent.service.dto.enumeration.ComputationLocation;
@@ -31,6 +34,7 @@ public class BlockChainService {
     private final CoordinatorService coordinator;
     private final WalletService wallet;
     private final ComputationService computationService;
+    private final ContainerLookupService containerLookupService;
 
     // State management using thread-safe collections
     private final Map<Long, SubscriptionDTO> subscriptions = new ConcurrentHashMap<>();
@@ -38,11 +42,18 @@ public class BlockChainService {
     private final Map<SubscriptionRunKey, String> pendingTxs = new ConcurrentHashMap<>();
     private final Map<SubscriptionRunKey, AtomicInteger> txAttempts = new ConcurrentHashMap<>();
 
-    public BlockChainService(Web3j web3j, CoordinatorService coordinator, WalletService wallet, ComputationService computationService) {
+    public BlockChainService(
+        Web3j web3j,
+        CoordinatorService coordinator,
+        WalletService wallet,
+        ComputationService computationService,
+        ContainerLookupService containerLookupService
+    ) {
         this.web3j = web3j;
         this.coordinator = coordinator;
         this.wallet = wallet;
         this.computationService = computationService;
+        this.containerLookupService = containerLookupService;
     }
 
     /**
@@ -150,7 +161,7 @@ public class BlockChainService {
     /**
      * Core processing loop, runs every 100ms.
      */
-    @Scheduled(fixedDelay = 100)
+    @Scheduled(fixedDelay = 1000)
     public void processActiveSubscriptions() {
         pruneFailedTxs();
 
@@ -193,7 +204,12 @@ public class BlockChainService {
             log.warn("Subscription {} has exceeded max retries for interval {}.", subId, interval);
             return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
         }
-
+        log.debug(
+            "scription Id: {}, interval: {} containerId: {}",
+            subscription.getId(),
+            subscription.getInterval(),
+            containerLookupService.getContainers(subscription.getContainerId())
+        );
         if (!isDelegated) {
             // For non-delegated, check if already responded
             return coordinator
@@ -205,13 +221,21 @@ public class BlockChainService {
                     }
                     // If not responded, check if a valid commitment exists for this interval
                     return coordinator
-                        .hasRequestCommitments(BigInteger.valueOf(subscription.getId()), BigInteger.valueOf(interval))
+                        .hasRequestCommitments(subscription.getId(), interval)
                         .thenCompose(hasCommitment -> {
                             if (hasCommitment) {
                                 // If commitment exists, fetch it to pass it to the processing step.
                                 return coordinator
                                     .getCommitment(subscription.getId(), interval)
-                                    .thenApply(commitment -> new ShouldProcessResult(true, coordinator.encodeCommitment(commitment)));
+                                    .thenApply(commitment -> {
+                                        log.debug(
+                                            "sub scription Id: {}, containerId: {}, hasConnmitment: {}",
+                                            subscription.getId(),
+                                            containerLookupService.getContainers(subscription.getContainerId()),
+                                            hasCommitment
+                                        );
+                                        return new ShouldProcessResult(true, coordinator.encodeCommitment(commitment));
+                                    });
                             } else {
                                 // If no commitment, no need to process.
                                 return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
@@ -325,17 +349,24 @@ public class BlockChainService {
                 );
         }
 
-        return computationInputFuture.thenCompose(computationInput ->
-            computationService.processChainProcessorComputation(
+        return computationInputFuture.thenCompose(computationInput -> {
+            log.debug(
+                "Processing subscription {} interval {} containerId {} input.data (decoded): {}",
+                subscription.getId(),
+                subscription.getInterval(),
+                containerLookupService.getContainers(subscription.getContainerId()),
+                decodeInputDataToString(computationInput.getData())
+            );
+            return computationService.processChainProcessorComputation(
                 UUID.randomUUID(),
                 computationInput,
-                List.of(subscription.getContainerId()),
+                containerLookupService.getContainers(subscription.getContainerId()),
                 subscription.hasVerifier(),
                 requestId,
                 commitment,
                 delegated ? delegatedParams.subscription() : null
-            )
-        );
+            );
+        });
     }
 
     private CompletableFuture<String> deliver(

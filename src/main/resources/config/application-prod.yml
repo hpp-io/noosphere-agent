@@ -18,6 +18,7 @@ logging:
     ROOT: INFO
     tech.jhipster: INFO
     io.hpp.noosphere.agent: INFO
+    okhttp3: INFO
 
 management:
   prometheus:

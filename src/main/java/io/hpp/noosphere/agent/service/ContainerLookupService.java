@@ -87,6 +87,10 @@ public class ContainerLookupService {
         return getContainers(hashHex);
     }
 
+    public String getContainersHashString(byte[] hashBytes) {
+        return Numeric.toHexString(hashBytes);
+    }
+
     /**
      * Generates all possible permutations of comma-separated container IDs from the
      * power set of the given list.

@@ -353,8 +353,11 @@ public class ContainerManagerService {
         for (ApplicationProperties.NoosphereConfig.NoosphereContainer config : configs) {
             try {
                 log.info("Pulling image: {}", config.getImage());
+                // Explicitly use the authentication configuration from the Docker client
+                // This ensures credentials from config.json are used for the pull command.
                 dockerClient
                     .pullImageCmd(config.getImage())
+                    .withAuthConfig(dockerClient.authConfig())
                     .exec(new PullImageResultCallback())
                     .awaitCompletion(5, java.util.concurrent.TimeUnit.MINUTES);
 

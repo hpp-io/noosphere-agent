@@ -228,7 +228,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
                     SubscriptionDTO.builder()
                         .id(currentId)
                         .routeId(new String(contractSubscriptions.get(i).routeId, StandardCharsets.UTF_8).replaceAll("\\x00+$", ""))
-                        .containerId(containerLookupService.getContainers(contractSubscriptions.get(i).containerId).getFirst())
+                        .containerId(containerLookupService.getContainersHashString(contractSubscriptions.get(i).containerId))
                         .feeAmount(contractSubscriptions.get(i).feeAmount)
                         .feeToken(contractSubscriptions.get(i).feeToken)
                         .client(contractSubscriptions.get(i).client)

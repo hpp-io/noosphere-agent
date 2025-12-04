@@ -8,6 +8,7 @@ import io.hpp.noosphere.agent.exception.ContainerException;
 import io.hpp.noosphere.agent.service.dto.*;
 import io.hpp.noosphere.agent.service.dto.enumeration.ComputationLocation;
 import io.hpp.noosphere.agent.service.dto.enumeration.ContainerStatus;
+import io.hpp.noosphere.agent.service.util.CommonUtil;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
@@ -70,20 +71,6 @@ public class ComputationService {
     }
 
     /**
-     * Extracts the 'hex_data' byte array from the input map and decodes it into a UTF-8 string.
-     */
-    private String decodeInputDataToString(Map<String, Object> data) {
-        if (data == null) {
-            return "";
-        }
-        Object hexData = data.get("hex_data");
-        if (hexData instanceof byte[]) {
-            return new String((byte[]) hexData, StandardCharsets.UTF_8);
-        }
-        return "";
-    }
-
-    /**
      * 작업을 실행합니다
      */
     private CompletableFuture<List<ContainerResultDTO>> runComputation(
@@ -110,11 +97,11 @@ public class ComputationService {
                 .requiresProof(requiresProof)
                 .build();
 
-            log.debug("Initial input.data (decoded): {}", decodeInputDataToString(computationInput.getData()));
+            log.debug("Initial input.data (decoded): {}", CommonUtil.decodeInputDataToString(computationInput.getData()));
             // 컨테이너 체인 실행
             for (int index = 0; index < (requiresProof ? containers.size() + 1 : containers.size()); index++) {
                 String container = containers.get(index);
-                log.debug("container id: {}, input.data: {}", container, decodeInputDataToString(inputData.getData()));
+                log.debug("container id: {}, input.data: {}", container, CommonUtil.decodeInputDataToString(inputData.getData()));
                 String url = getContainerUrl(container, false);
                 Map<String, String> headers = getHeaders(container);
 
@@ -125,7 +112,9 @@ public class ComputationService {
                         .uri(url)
                         .headers(httpHeaders -> headers.forEach(httpHeaders::set))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(inputData.getData() != null ? decodeInputDataToString(inputData.getData()) : Collections.emptyMap())
+                        .bodyValue(
+                            inputData.getData() != null ? CommonUtil.decodeInputDataToString(inputData.getData()) : Collections.emptyMap()
+                        )
                         .retrieve()
                         .bodyToMono(Map.class)
                         .timeout(Duration.ofMinutes(3))

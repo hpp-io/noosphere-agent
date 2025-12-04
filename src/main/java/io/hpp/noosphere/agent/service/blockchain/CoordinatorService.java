@@ -308,8 +308,8 @@ public class CoordinatorService {
         return Hash.sha3(buffer.array());
     }
 
-    public CompletableFuture<Boolean> hasRequestCommitments(BigInteger subscriptionId, BigInteger interval) {
-        byte[] requestId = getRequestId(subscriptionId, interval);
+    public CompletableFuture<Boolean> hasRequestCommitments(long subscriptionId, long interval) {
+        byte[] requestId = getRequestId(BigInteger.valueOf(subscriptionId), BigInteger.valueOf(interval));
         return web3DelegateeCoordinatorService
             .getRequestCommitment(requestId)
             .thenApply(commitment -> {

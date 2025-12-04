@@ -267,6 +267,12 @@ public class Web3RouterService {
                     );
 
                 String result = web3j.ethCall(transaction, blockParameter).send().getValue();
+
+                // Handle cases where the contract call returns no data
+                if (result == null || result.equals("0x") || result.isEmpty()) {
+                    log.warn("eth_call for getLastSubscriptionId returned empty result. Assuming 0.");
+                    return BigInteger.ZERO;
+                }
                 BigInteger lastId = (BigInteger) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(0).getValue();
 
                 // The contract returns the total count, so the highest ID is count - 1.
@@ -355,6 +361,12 @@ public class Web3RouterService {
                     );
 
                 String result = web3j.ethCall(transaction, blockParameter).send().getValue();
+
+                // Handle cases where the contract call returns no data
+                if (result == null || result.equals("0x") || result.isEmpty()) {
+                    log.warn("eth_call for getDelegateCreatedId returned empty result. Assuming 0.");
+                    return BigInteger.ZERO;
+                }
                 return (BigInteger) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(0).getValue();
             } catch (Exception e) {
                 log.error("Failed to get delegate created ID for owner {} and nonce {}", subscription.getClient(), signature.nonce(), e);

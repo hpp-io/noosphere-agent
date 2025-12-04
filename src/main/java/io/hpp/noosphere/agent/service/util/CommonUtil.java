@@ -1069,4 +1069,18 @@ public class CommonUtil {
         }
         return result;
     }
+
+    /**
+     * Extracts the 'hex_data' byte array from the input map and decodes it into a UTF-8 string.
+     */
+    public static String decodeInputDataToString(Map<String, Object> data) {
+        if (data == null) {
+            return "";
+        }
+        Object hexData = data.get("hex_data");
+        if (hexData instanceof byte[]) {
+            return new String((byte[]) hexData, StandardCharsets.UTF_8);
+        }
+        return "";
+    }
 }

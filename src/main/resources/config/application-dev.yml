@@ -19,6 +19,7 @@ logging:
     tech.jhipster: DEBUG
     org.hibernate.SQL: DEBUG
     io.hpp.noosphere.agent: DEBUG
+    okhttp3: INFO
 
 spring:
   devtools:
