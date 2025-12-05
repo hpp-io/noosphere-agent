@@ -41,17 +41,23 @@ public class ComputationService {
     /**
      * 컨테이너의 서비스 URL을 가져옵니다
      */
-    private String getContainerUrl(String container, boolean isProof) {
-        String containerUrl = containerManager.getUrl(container);
-        if (containerUrl != null && !containerUrl.isEmpty()) {
-            return containerUrl + (isProof ? "/service_output" : "/computation");
+    private String getContainerUrl(String containerId, boolean isProof) {
+        String runtimeEnv = System.getenv("HPP_RUNTIME");
+        String endpoint = isProof ? "/service_output" : "/computation";
+
+        if ("docker".equals(runtimeEnv)) {
+            // DooD mode: Connect via container name and internal port
+            String containerName = containerManager.getContainerName(containerId);
+            int internalPort = containerManager.getInternalPort(containerId);
+            return String.format("http://%s:%d%s", containerName, internalPort, endpoint);
+        } else {
+            // Local process mode: Connect via localhost and the host-mapped port
+            int hostPort = containerManager.getPort(containerId);
+            if (hostPort == -1) {
+                throw new IllegalStateException("Container port not found or not mapped to host for " + containerId);
+            }
+            return String.format("http://localhost:%d%s", hostPort, endpoint);
         }
-
-        // In a Docker network, communicate using the container name and its internal port.
-        String containerName = containerManager.getContainerName(container);
-        int internalPort = containerManager.getInternalPort(container);
-
-        return String.format("http://%s:%d%s", containerName, internalPort, isProof ? "/service_output" : "/computation");
     }
 
     /**
