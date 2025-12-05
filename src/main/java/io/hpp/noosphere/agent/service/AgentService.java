@@ -90,6 +90,7 @@ public class AgentService {
 
             // 직접 repository.save() 호출 (save() 메소드를 거치지 않음)
             Agent savedAgent = agentRepository.save(agentToSave);
+            agentRepository.flush();
             this.registeredAgent = agentMapper.toDto(savedAgent);
             log.info("Agent {} synced successfully.", savedAgent.getId());
         } catch (Exception e) {

@@ -2,6 +2,7 @@ package io.hpp.noosphere.agent.service;
 
 import io.hpp.noosphere.agent.config.ApplicationProperties;
 import io.hpp.noosphere.agent.service.blockchain.BlockChainService;
+import io.hpp.noosphere.agent.service.dto.AgentDTO;
 import io.hpp.noosphere.agent.service.dto.DelegatedRequestDTO;
 import io.hpp.noosphere.agent.service.dto.KeepAliveResponseDTO;
 import io.hpp.noosphere.agent.service.util.CommonUtil;
@@ -43,12 +44,13 @@ public class HubKeepAliveService {
     @Scheduled(fixedDelayString = "${application.noosphere.hub.keep-alive.interval-ms}")
     public void sendKeepAlive() {
         ApplicationProperties.NoosphereConfig.Hub hubConfig = applicationProperties.getNoosphere().getHub();
-        if (hubConfig == null || !hubConfig.getKeepAlive().getEnabled() || agentService.getRegisteredAgent() == null) {
+        if (hubConfig == null || !hubConfig.getKeepAlive().getEnabled() || agentService.findFirst().isEmpty()) {
             // Keep-alive is disabled, do nothing.
             return;
         }
-
-        String agentId = agentService.getRegisteredAgent().getId().toString();
+        AgentDTO agentDTO = agentService.findFirst().get();
+        log.debug("agent: {}", agentDTO);
+        String agentId = agentDTO.getId().toString();
         String hubUrl = hubConfig.getUrl();
         String keepAliveUrl = hubUrl + "/api/agents/" + agentId + "/keep-alive";
 

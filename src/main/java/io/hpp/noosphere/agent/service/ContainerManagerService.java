@@ -466,14 +466,23 @@ public class ContainerManagerService {
                 })
                 .collect(Collectors.toList());
 
+            // Create HostConfig to set network mode
+            HostConfig hostConfig = new HostConfig().withPortBindings(portBindings).withBinds(binds);
+
+            // Connect the new container to the same network as the agent
+            String networkName = System.getenv("DOCKER_NETWORK");
+            if (networkName != null && !networkName.isEmpty()) {
+                log.info("Attaching container {} to network {}", containerName, networkName);
+                hostConfig.withNetworkMode(networkName);
+            }
+
             // Create container
             com.github.dockerjava.api.command.CreateContainerCmd createContainerCmd = dockerClient
                 .createContainerCmd(config.getImage())
                 .withName(containerName)
                 .withExposedPorts(exposedPorts)
-                .withPortBindings(portBindings)
-                .withEnv(envList)
-                .withBinds(binds);
+                .withHostConfig(hostConfig)
+                .withEnv(envList);
 
             // Set command only if it is provided and not blank
             if (config.getCommand() != null && !config.getCommand().isBlank()) {

@@ -108,6 +108,7 @@ public class ComputationService {
                 String container = containers.get(index);
                 log.debug("container id: {}, input.data: {}", container, CommonUtil.decodeInputDataToString(inputData.getData()));
                 String url = getContainerUrl(container, false);
+                log.debug("container url: {}", url);
                 Map<String, String> headers = getHeaders(container);
 
                 try {
@@ -146,7 +147,13 @@ public class ComputationService {
                         .block();
                     // 성공 결과 추가
                     results.add(new ContainerOutputDTO(container, Objects.requireNonNull(response).get("output"), null));
-                    log.info("ComputationId={}, container={}, inputData={}, result=", ComputationId, container, computationInput, response);
+                    log.info(
+                        "ComputationId={}, container={}, inputData={}, result={}",
+                        ComputationId,
+                        container,
+                        computationInput,
+                        response
+                    );
                     dataStoreService.trackContainerStatus(container, ContainerStatus.SUCCESS);
 
                     // If proof is required, prepare and call the verifier container
