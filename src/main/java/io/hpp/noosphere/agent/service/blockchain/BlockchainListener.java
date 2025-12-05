@@ -12,10 +12,7 @@ import io.hpp.noosphere.agent.service.dto.OnchainRequestDTO;
 import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
 import io.hpp.noosphere.agent.service.mapper.SubscriptionMapper;
 import io.reactivex.disposables.Disposable;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -27,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.web3j.protocol.Web3j;
@@ -149,7 +145,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
         }
 
         this.requestStartedSubscription = routerContract
-            .requestStartEventFlowable(DefaultBlockParameterName.EARLIEST, DefaultBlockParameterName.LATEST)
+            .requestStartEventFlowable(DefaultBlockParameterName.LATEST, DefaultBlockParameterName.LATEST)
             .subscribe(
                 this::processRequestStartedEvent, // onNext: when a new event arrives
                 error -> { // onError

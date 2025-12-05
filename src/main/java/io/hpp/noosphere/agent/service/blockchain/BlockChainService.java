@@ -377,7 +377,7 @@ public class BlockChainService {
 
                 // Serialize output and deliver transaction
                 SerializedOutput serialized = serializeContainerOutput(lastResult);
-                return deliver(subscription, delegated, delegatedParams, serialized, commitment);
+                return deliver(subscription, interval, delegated, delegatedParams, serialized, commitment);
             })
             .thenAccept(txHash -> {
                 if (txHash != null) {
@@ -446,6 +446,7 @@ public class BlockChainService {
 
     private CompletableFuture<String> deliver(
         SubscriptionDTO subscription,
+        long interval,
         boolean delegated,
         DelegatedSubscriptionData delegatedParams,
         SerializedOutput serializedOutput,
@@ -462,6 +463,7 @@ public class BlockChainService {
         } else {
             return wallet.deliverCompute(
                 subscription,
+                interval,
                 serializedOutput.input(),
                 serializedOutput.output(),
                 serializedOutput.proof(),
@@ -488,7 +490,7 @@ public class BlockChainService {
         String outputString = output.getOutput().toString();
         byte[] inputBytes = new byte[0];
         byte[] outputBytes = outputString.getBytes();
-        byte[] proofBytes = output.getProof().getBytes();
+        byte[] proofBytes = output.getProof() == null ? new byte[0] : output.getProof().getBytes();
         return new SerializedOutput(inputBytes, outputBytes, proofBytes);
     }
 

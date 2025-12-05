@@ -112,6 +112,7 @@ public class WalletService {
 
     public CompletableFuture<String> deliverCompute(
         SubscriptionDTO subscription,
+        long interval,
         byte[] input,
         byte[] output,
         byte[] proof,
@@ -120,14 +121,7 @@ public class WalletService {
         Runnable simulation = () -> {
             try {
                 coordinatorService
-                    .reportComputeResult(
-                        BigInteger.valueOf(subscription.getInterval()),
-                        input,
-                        output,
-                        proof,
-                        commitmentData,
-                        getPaymentAddress()
-                    )
+                    .reportComputeResult(BigInteger.valueOf(interval), input, output, proof, commitmentData, getPaymentAddress())
                     .join(); // .send() on a read-only call simulates it
             } catch (Exception e) {
                 throw new RuntimeException(e);

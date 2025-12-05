@@ -194,6 +194,8 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'com.googlecode.libphonenumber:libphonenumber:8.12.46'
     implementation "commons-beanutils:commons-beanutils:1.9.4"
+    // MacOS DNS Resolver fix
+    runtimeOnly 'io.netty:netty-resolver-dns-native-macos::osx-aarch_64'
 }
 
 ext {
