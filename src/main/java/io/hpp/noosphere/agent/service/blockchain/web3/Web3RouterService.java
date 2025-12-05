@@ -12,6 +12,7 @@ import jakarta.annotation.PostConstruct;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -41,7 +42,9 @@ public class Web3RouterService {
     private final Web3jConfig.CustomGasProvider gasProvider;
     private final BigInteger chainId;
 
+    @Getter
     private Router routerContract;
+
     private final Map<String, String> contractAddresses = new HashMap<>();
 
     public Web3RouterService(

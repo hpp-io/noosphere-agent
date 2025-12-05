@@ -1,6 +1,7 @@
 package io.hpp.noosphere.agent.service.blockchain;
 
 import io.hpp.noosphere.agent.config.ApplicationProperties;
+import io.hpp.noosphere.agent.contracts.Router;
 import io.hpp.noosphere.agent.contracts.SubscriptionBatchReader;
 import io.hpp.noosphere.agent.service.ContainerLookupService;
 import io.hpp.noosphere.agent.service.NoosphereConfigService;
@@ -9,12 +10,16 @@ import io.hpp.noosphere.agent.service.blockchain.web3.Web3RouterService;
 import io.hpp.noosphere.agent.service.blockchain.web3.Web3SubscriptionBatchReaderService;
 import io.hpp.noosphere.agent.service.dto.OnchainRequestDTO;
 import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
+import io.hpp.noosphere.agent.service.mapper.SubscriptionMapper;
+import io.reactivex.disposables.Disposable;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
@@ -26,6 +31,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.utils.Numeric;
 
 @Service
@@ -40,10 +46,12 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
     private final BlockChainService blockChainService;
     private final ApplicationProperties.NoosphereConfig.Chain properties;
     private final ContainerLookupService containerLookupService;
+    private final SubscriptionMapper subscriptionMapper;
 
     private final AtomicLong lastSyncedBlock = new AtomicLong(0);
     private final AtomicLong lastSubscriptionId = new AtomicLong(0);
     private final AtomicBoolean isSnapshotSyncing = new AtomicBoolean(false);
+    private Disposable requestStartedSubscription;
 
     public BlockchainListener(
         Web3j web3j,
@@ -52,7 +60,8 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
         RequestValidatorService requestValidatorService,
         BlockChainService blockChainService,
         NoosphereConfigService noosphereConfigService,
-        ContainerLookupService containerLookupService
+        ContainerLookupService containerLookupService,
+        SubscriptionMapper subscriptionMapper
     ) {
         this.web3j = web3j;
         this.web3Router = web3Router;
@@ -61,6 +70,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
         this.blockChainService = blockChainService;
         this.properties = noosphereConfigService.getActiveConfig().getChain();
         this.containerLookupService = containerLookupService;
+        this.subscriptionMapper = subscriptionMapper;
         log.info("Initialized ChainListenerService");
     }
 
@@ -77,14 +87,17 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
             lastSubscriptionId.set(properties.getSnapshotSync().getStartingSubId());
 
             log.info("Started snapshot sync up to block {}", headBlock);
-            isSnapshotSyncing.set(true);
-            snapshotSync(headBlock).join(); // Wait for snapshot sync to complete
-            isSnapshotSyncing.set(false);
+            //            isSnapshotSyncing.set(true);
+            //            snapshotSync(headBlock).join(); // Wait for snapshot sync to complete
+            //            isSnapshotSyncing.set(false);
 
-            long headSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue(); // This now returns the highest ID directly
+            long headSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue();
             lastSubscriptionId.set(headSubId);
 
             log.info("Finished snapshot sync. Last synced block: {}, Last sub ID: {}", headBlock, headSubId);
+
+            // Start listening for real-time events after initial sync
+            startListeningForEvents();
         } catch (Exception e) {
             log.error("Fatal error during initial snapshot sync. Shutting down.", e);
             // In a real app, you might want to shut down the application context here.
@@ -92,9 +105,9 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
     }
 
     /**
-     * Core processing loop.
+     * Core processing loop for subscription sync.
      */
-    @Scheduled(fixedDelayString = "${application.noosphere.chain.snapshot-sync.sync-period}")
+    //    @Scheduled(fixedDelayString = "${application.noosphere.chain.snapshot-sync.sync-period}")
     public void subscriptionSyncLoop() {
         if (isSnapshotSyncing.get()) {
             return; // Don't run if shutting down or initial sync is in progress
@@ -111,7 +124,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
                 snapshotSync(targetBlock).join(); // Wait for sync to complete
 
                 lastSyncedBlock.set(targetBlock);
-                long newHeadSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue(); // This now returns the highest ID directly
+                long newHeadSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue();
                 lastSubscriptionId.set(newHeadSubId);
 
                 log.info("Sync complete. Last synced block: {}, Last sub ID: {}", targetBlock, newHeadSubId);
@@ -124,12 +137,82 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
     }
 
     /**
+     * Starts listening for 'RequestStarted' events using a reactive Flowable.
+     */
+    private void startListeningForEvents() {
+        log.info("Attempting to subscribe to RequestStarted events...");
+        Router routerContract = web3Router.getRouterContract();
+
+        // Dispose of the old subscription if it exists to prevent duplicates
+        if (this.requestStartedSubscription != null && !this.requestStartedSubscription.isDisposed()) {
+            this.requestStartedSubscription.dispose();
+        }
+
+        this.requestStartedSubscription = routerContract
+            .requestStartEventFlowable(DefaultBlockParameterName.EARLIEST, DefaultBlockParameterName.LATEST)
+            .subscribe(
+                this::processRequestStartedEvent, // onNext: when a new event arrives
+                error -> { // onError
+                    log.error("Error in RequestStarted event subscription. It might be closed. Re-subscribing in 10 seconds...", error);
+                    // Schedule a reconnection attempt after a delay
+                    CompletableFuture.delayedExecutor(10, TimeUnit.SECONDS).execute(this::startListeningForEvents);
+                },
+                () -> { // onComplete
+                    log.info("RequestStarted event subscription stream completed unexpectedly. Re-subscribing in 10 seconds...");
+                    // Also attempt to reconnect if the stream completes, as it shouldn't for a live listener
+                    CompletableFuture.delayedExecutor(10, TimeUnit.SECONDS).execute(this::startListeningForEvents);
+                }
+            );
+    }
+
+    /**
+     * Processes a single 'RequestStarted' event.
+     */
+    private void processRequestStartedEvent(Router.RequestStartEventResponse event) {
+        log.info(
+            "Processing RequestStarted event: requestId={}, subscriptionId={}, containerId={}",
+            Numeric.toHexString(event.requestId),
+            event.subscriptionId,
+            Numeric.toHexString(event.containerId)
+        );
+
+        // Asynchronously fetch subscription details to get the wallet address
+        web3Router
+            .getComputeSubscription(event.subscriptionId)
+            .thenAccept(computeSubscription -> {
+                if (computeSubscription == null) {
+                    log.error("Could not find subscription details for ID: {}", event.subscriptionId);
+                    return;
+                }
+
+                // Create the DTO using the static factory method, which also creates the Commitment
+                OnchainRequestDTO requestDTO = OnchainRequestDTO.fromEvent(event, computeSubscription.wallet);
+                requestDTO.setSubscription(
+                    subscriptionMapper.toDto(event.subscriptionId.longValue(), computeSubscription, containerLookupService)
+                );
+                requestDTO.setRequiresProof(Optional.of(computeSubscription.verifier != null && !computeSubscription.verifier.isEmpty()));
+
+                boolean isValid = requestValidatorService.validateOnChainRequest(requestDTO);
+                if (isValid) {
+                    blockChainService.processIncomingRequest(requestDTO);
+                    log.info("Relayed on-chain request to computation service: requestId={}", Numeric.toHexString(event.requestId));
+                } else {
+                    log.warn("Ignored invalid on-chain request: requestId={}", Numeric.toHexString(event.requestId));
+                }
+            })
+            .exceptionally(ex -> {
+                log.error("Failed to process RequestStarted event for subscriptionId {}", event.subscriptionId, ex);
+                return null;
+            });
+    }
+
+    /**
      * Snapshot syncs subscriptions from the Coordinator up to the given head block.
      */
     private CompletableFuture<Void> snapshotSync(long headBlock) {
         return CompletableFuture.runAsync(() -> {
             try {
-                long headSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue(); // This now returns the highest ID directly
+                long headSubId = web3Router.getLastSubscriptionId(headBlock).join().longValue();
                 log.info("Snapshot sync: Found highest subscription ID {} at block {}", headSubId, headBlock);
 
                 long startId = lastSubscriptionId.get() + 1;
@@ -223,24 +306,7 @@ public class BlockchainListener implements ApplicationListener<ApplicationReadyE
             // Convert contract DTOs to internal Subscription objects
             List<SubscriptionDTO> subscriptions = new ArrayList<>();
             for (int i = 0; i < contractSubscriptions.size(); i++) {
-                long currentId = (long) startId + i;
-                subscriptions.add(
-                    SubscriptionDTO.builder()
-                        .id(currentId)
-                        .routeId(new String(contractSubscriptions.get(i).routeId, StandardCharsets.UTF_8).replaceAll("\\x00+$", ""))
-                        .containerId(containerLookupService.getContainersHashString(contractSubscriptions.get(i).containerId))
-                        .feeAmount(contractSubscriptions.get(i).feeAmount)
-                        .feeToken(contractSubscriptions.get(i).feeToken)
-                        .client(contractSubscriptions.get(i).client)
-                        .activeAt(contractSubscriptions.get(i).activeAt.longValue())
-                        .intervalSeconds(contractSubscriptions.get(i).intervalSeconds.longValue())
-                        .maxExecutions(contractSubscriptions.get(i).maxExecutions.longValue())
-                        .wallet(contractSubscriptions.get(i).wallet)
-                        .verifier(contractSubscriptions.get(i).verifier)
-                        .redundancy(contractSubscriptions.get(i).redundancy.intValue())
-                        .useDeliveryInbox(contractSubscriptions.get(i).useDeliveryInbox)
-                        .build()
-                );
+                subscriptions.add(subscriptionMapper.toDto((long) startId + i, contractSubscriptions.get(i), containerLookupService));
             }
 
             updateResponseCountsForLastInterval(subscriptions, blockNumber).join();

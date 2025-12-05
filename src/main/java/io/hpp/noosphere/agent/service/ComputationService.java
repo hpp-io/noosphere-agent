@@ -187,7 +187,7 @@ public class ComputationService {
                         "Container error: ComputationId={}, container={}, inputData={} error={}",
                         ComputationId,
                         container,
-                        computationInput.getData(),
+                        CommonUtil.decodeInputDataToString(computationInput.getData()),
                         e.getMessage()
                     );
 

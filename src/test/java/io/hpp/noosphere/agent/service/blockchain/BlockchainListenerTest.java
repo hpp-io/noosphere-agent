@@ -13,6 +13,7 @@ import io.hpp.noosphere.agent.service.blockchain.web3.Web3RouterService;
 import io.hpp.noosphere.agent.service.blockchain.web3.Web3SubscriptionBatchReaderService;
 import io.hpp.noosphere.agent.service.dto.OnchainRequestDTO;
 import io.hpp.noosphere.agent.service.dto.SubscriptionDTO;
+import io.hpp.noosphere.agent.service.mapper.SubscriptionMapper;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Collections;
@@ -55,6 +56,8 @@ class BlockchainListenerTest {
 
     private BlockchainListener blockchainListener;
 
+    private SubscriptionMapper subscriptionMapper;
+
     @BeforeEach
     void setUp() throws IOException {
         // Mock ApplicationProperties
@@ -90,7 +93,8 @@ class BlockchainListenerTest {
             mockRequestValidatorService,
             mockBlockChainService,
             mockNoosphereConfigService,
-            mockContainerLookupService
+            mockContainerLookupService,
+            subscriptionMapper
         );
 
         // Set initial state to avoid running onApplicationEvent

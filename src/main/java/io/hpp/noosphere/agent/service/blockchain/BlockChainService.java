@@ -37,7 +37,7 @@ public class BlockChainService {
     private final ContainerLookupService containerLookupService;
 
     // State management using thread-safe collections
-    private final Map<Long, SubscriptionDTO> subscriptions = new ConcurrentHashMap<>();
+    private final Map<OnchainSubscriptionId, OnchainRequestDTO> onChainRequests = new ConcurrentHashMap<>();
     private final Map<DelegatedSubscriptionId, DelegatedSubscriptionData> delegateSubscriptions = new ConcurrentHashMap<>();
     private final Map<SubscriptionRunKey, String> pendingTxs = new ConcurrentHashMap<>();
     private final Map<SubscriptionRunKey, AtomicInteger> txAttempts = new ConcurrentHashMap<>();
@@ -73,8 +73,16 @@ public class BlockChainService {
     }
 
     private void ProcessOnchainRequest(OnchainRequestDTO requestDTO) {
-        subscriptions.put(requestDTO.getSubscription().getId(), requestDTO.getSubscription());
-        log.info("Tracked new subscription! id={}, total={}", requestDTO.getSubscription().getId(), subscriptions.size());
+        onChainRequests.put(
+            new OnchainSubscriptionId(requestDTO.getSubscription().getId(), requestDTO.getCommitment().interval.longValue()),
+            requestDTO
+        );
+        log.info(
+            "Tracked new subscription! id={}, interval={}, total={}",
+            requestDTO.getSubscription().getId(),
+            requestDTO.getCommitment().interval,
+            onChainRequests.size()
+        );
     }
 
     private CompletableFuture<Void> ProcessDelegatedRequest(DelegatedRequestDTO requestDTO) {
@@ -97,11 +105,7 @@ public class BlockChainService {
                 .thenCompose(existingSub -> {
                     if (existingSub.exists()) {
                         // 3. If so, evict relevant run from pending
-                        log.info(
-                            "Delegated subscription exists on-chain with ID: {}, tracked locally: {}",
-                            existingSub.subscriptionId(),
-                            subscriptions.containsKey(existingSub.subscriptionId())
-                        );
+                        log.info("Delegated subscription exists on-chain with ID: {}", existingSub.subscriptionId());
 
                         // Evict current delegate runs from pending
                         // The interval might not be known at this point, so we use a placeholder or a convention.
@@ -159,24 +163,23 @@ public class BlockChainService {
     }
 
     /**
-     * Core processing loop, runs every 100ms.
+     * Core processing loop, runs every 1000ms.
      */
     @Scheduled(fixedDelay = 1000)
     public void processActiveSubscriptions() {
         pruneFailedTxs();
-
         // Process regular subscriptions
-        subscriptions.forEach((subId, subscription) -> {
-            shouldProcess(new OnchainSubscriptionId(subId), subscription, false).thenAccept(result -> {
+        onChainRequests.forEach((subId, onchainRequest) -> {
+            shouldProcessOnChain(subId, onchainRequest.getSubscription()).thenAccept(result -> {
                 if (result.should()) {
-                    processSubscription(new OnchainSubscriptionId(subId), subscription, false, null, result.commitment());
+                    processSubscription(subId, onchainRequest.getSubscription(), false, null, result.commitment());
                 }
             });
         });
 
         // Process delegated subscriptions
         delegateSubscriptions.forEach((delegateSubId, params) -> {
-            shouldProcess(delegateSubId, params.subscription(), true).thenAccept(result -> {
+            shouldProcessDelegated(delegateSubId, params.subscription(), true).thenAccept(result -> {
                 if (result.should()) {
                     processSubscription(delegateSubId, params.subscription(), true, params, null);
                 }
@@ -184,7 +187,67 @@ public class BlockChainService {
         });
     }
 
-    private CompletableFuture<ShouldProcessResult> shouldProcess(
+    private CompletableFuture<ShouldProcessResult> shouldProcessOnChain(SubscriptionIdentifier subId, SubscriptionDTO subscription) {
+        // Ensure the identifier is the correct type before casting
+        if (!(subId instanceof OnchainSubscriptionId onchainSubId)) {
+            log.warn("shouldProcessOnChain called with incorrect subscription identifier type: {}", subId.getClass().getName());
+            return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
+        }
+
+        long id = onchainSubId.id();
+
+        long interval = onchainSubId.interval();
+        SubscriptionRunKey runKey = new SubscriptionRunKey(onchainSubId, interval);
+
+        if (pendingTxs.containsKey(runKey)) {
+            return CompletableFuture.completedFuture(new ShouldProcessResult(false, null)); // Already processing
+        }
+
+        if (txAttempts.getOrDefault(runKey, new AtomicInteger(0)).get() >= 3) {
+            log.warn("Subscription {} has exceeded max retries for interval {}.", subId, interval);
+            return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
+        }
+        log.debug(
+            "scription Id: {}, interval: {} containerId: {}",
+            id,
+            interval,
+            containerLookupService.getContainers(subscription.getContainerId())
+        );
+        // For non-delegated, check if already responded
+        return coordinator
+            .getNodeHasDeliveredResponse(id, interval, wallet.getAddress(), null)
+            .thenCompose(hasResponded -> {
+                if (hasResponded) {
+                    subscription.setNodeReplied(interval);
+                    return CompletableFuture.completedFuture(new ShouldProcessResult(false, null)); // Already responded, do not process
+                }
+                // If not responded, check if a valid commitment exists for this interval
+                return coordinator
+                    .hasRequestCommitments(id, interval)
+                    .thenCompose(hasCommitment -> {
+                        if (hasCommitment) {
+                            // If commitment exists, fetch it to pass it to the processing step.
+                            return coordinator
+                                .getCommitment(id, interval)
+                                .thenApply(commitment -> {
+                                    log.debug(
+                                        "sub scription Id: {}, containerId: {}, hasConnmitment: {}",
+                                        subscription.getId(),
+                                        containerLookupService.getContainers(subscription.getContainerId()),
+                                        hasCommitment
+                                    );
+                                    return new ShouldProcessResult(true, coordinator.encodeCommitment(commitment));
+                                });
+                        } else {
+                            // If no commitment, no need to process.
+                            pendingTxs.remove(runKey);
+                            return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
+                        }
+                    });
+            });
+    }
+
+    private CompletableFuture<ShouldProcessResult> shouldProcessDelegated(
         SubscriptionIdentifier subId,
         SubscriptionDTO subscription,
         boolean isDelegated
@@ -272,28 +335,39 @@ public class BlockChainService {
 
     @Async
     public void processSubscription(
-        SubscriptionIdentifier id,
+        SubscriptionIdentifier subId,
         SubscriptionDTO subscription,
         boolean delegated,
         DelegatedSubscriptionData delegatedParams,
         byte[] commitment
     ) {
-        long interval = subscription.getInterval();
-        SubscriptionRunKey runKey = new SubscriptionRunKey(id, interval);
-
-        log.info("Processing subscription: id={}, interval={}, delegated={}", id, interval, delegated);
-
+        SubscriptionRunKey runKey;
+        long interval;
+        if (!delegated) {
+            if (!(subId instanceof OnchainSubscriptionId onchainSubId)) {
+                log.warn("processSubscription called with incorrect subscription identifier type: {}", subId.getClass().getName());
+                return;
+            }
+            interval = onchainSubId.interval();
+        } else {
+            if (!(subId instanceof DelegatedSubscriptionId delegatedSubscriptionId)) {
+                log.warn("processSubscription called with incorrect subscription identifier type: {}", subId.getClass().getName());
+                return;
+            }
+            interval = delegatedSubscriptionId.nonce();
+        }
+        runKey = new SubscriptionRunKey(subId, interval);
         // Block further processing for this run
         pendingTxs.put(runKey, BLOCKED_TX);
 
         // Execute containers and process the result
-        executeOnContainers(subscription, delegated, delegatedParams, extractRequestIdFromCommitment(commitment), commitment)
+        executeOnContainers(subscription, interval, delegated, delegatedParams, extractRequestIdFromCommitment(commitment), commitment)
             .thenCompose(results -> {
                 if (results.isEmpty() || results.get(results.size() - 1) instanceof ContainerErrorDTO) {
                     log.error("Container execution failed for {}: {}", runKey, results);
                     pendingTxs.remove(runKey); // Unblock for retry
                     if (subscription.isCallback()) {
-                        stopTracking(id, delegated);
+                        stopTracking(subId, delegated);
                     }
                     return CompletableFuture.completedFuture(null); // End chain
                 }
@@ -315,7 +389,7 @@ public class BlockChainService {
                 log.error("Failed to process subscription {}: {}", runKey, e.getMessage());
                 pendingTxs.remove(runKey); // Unblock for retry
                 if (subscription.isCallback()) {
-                    stopTracking(id, delegated);
+                    stopTracking(subId, delegated);
                 }
                 return null;
             });
@@ -323,6 +397,7 @@ public class BlockChainService {
 
     private CompletableFuture<List<ContainerResultDTO>> executeOnContainers(
         SubscriptionDTO subscription,
+        long interval,
         boolean delegated,
         DelegatedSubscriptionData delegatedParams,
         byte[] requestId,
@@ -339,7 +414,7 @@ public class BlockChainService {
             );
         } else {
             computationInputFuture = coordinator
-                .getContainerInputs(subscription, (int) subscription.getInterval())
+                .getContainerInputs(subscription, interval)
                 .thenApply(inputHex ->
                     ComputationInputDTO.builder()
                         .source(ComputationLocation.ON_CHAIN.name())
@@ -353,7 +428,7 @@ public class BlockChainService {
             log.debug(
                 "Processing subscription {} interval {} containerId {} input.data (decoded): {}",
                 subscription.getId(),
-                subscription.getInterval(),
+                interval,
                 containerLookupService.getContainers(subscription.getContainerId()),
                 decodeInputDataToString(computationInput.getData())
             );
@@ -399,7 +474,7 @@ public class BlockChainService {
         if (delegated) {
             delegateSubscriptions.remove((DelegatedSubscriptionId) subscriptionId);
         } else {
-            subscriptions.remove(((OnchainSubscriptionId) subscriptionId).id());
+            onChainRequests.remove((OnchainSubscriptionId) subscriptionId);
         }
 
         pendingTxs.keySet().removeIf(key -> key.subscriptionId().equals(subscriptionId));
