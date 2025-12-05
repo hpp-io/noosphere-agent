@@ -260,6 +260,31 @@ public class ContainerManagerService {
     }
 
     /**
+     * Gets the internal port of a container from its configuration.
+     * This is the port the service runs on *inside* the container.
+     * @param containerId The ID of the container from config.json.
+     * @return The internal port number.
+     */
+    public int getInternalPort(String containerId) {
+        return configs
+            .stream()
+            .filter(config -> config.getId().equals(containerId))
+            .findFirst()
+            .map(ApplicationProperties.NoosphereConfig.NoosphereContainer::getPort)
+            .orElseThrow(() -> new IllegalStateException("No internal port configured for container: " + containerId));
+    }
+
+    /**
+     * Gets the full container name used by Docker.
+     * @param containerId The ID of the container from config.json.
+     * @return The full container name (e.g., "noosphere-llm").
+     */
+    public String getContainerName(String containerId) {
+        // The naming convention is defined in createAndStartContainer
+        return "noosphere-" + containerId;
+    }
+
+    /**
      * Container setup and execution
      */
     public void initializeContainers() {

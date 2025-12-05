@@ -20,9 +20,11 @@ public class ContainerCounter implements Serializable {
     @Column(name = "container_id")
     private String containerId;
 
+    @Builder.Default
     @Column(name = "success_count", nullable = false)
     private Long successCount = 0L;
 
+    @Builder.Default
     @Column(name = "failed_count", nullable = false)
     private Long failedCount = 0L;
 

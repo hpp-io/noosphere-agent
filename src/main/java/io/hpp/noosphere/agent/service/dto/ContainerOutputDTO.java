@@ -9,6 +9,6 @@ import lombok.Data;
 public class ContainerOutputDTO implements ContainerResultDTO {
 
     private String container;
-    private Map<String, Object> output;
+    private Object output;
     private String proof;
 }

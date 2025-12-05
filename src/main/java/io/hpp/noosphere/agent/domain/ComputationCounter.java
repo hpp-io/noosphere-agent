@@ -31,6 +31,7 @@ public class ComputationCounter implements Serializable {
     @Enumerated(EnumType.STRING)
     private ComputationStatus status; // running, success, failed
 
+    @Builder.Default
     @Column(nullable = false)
     private Long count = 0L;
 

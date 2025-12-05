@@ -38,10 +38,6 @@ public class ComputationService {
         this.webClient = webClient;
     }
 
-    private final String host = System.getenv("RUNTIME") != null && "docker".equals(System.getenv("RUNTIME"))
-        ? "host.docker.internal"
-        : "localhost";
-
     /**
      * 컨테이너의 서비스 URL을 가져옵니다
      */
@@ -49,10 +45,13 @@ public class ComputationService {
         String containerUrl = containerManager.getUrl(container);
         if (containerUrl != null && !containerUrl.isEmpty()) {
             return containerUrl + (isProof ? "/service_output" : "/computation");
-        } else {
-            int port = containerManager.getPort(container);
-            return String.format("http://%s:%d" + (isProof ? "/service_output" : "/computation"), host, port);
         }
+
+        // In a Docker network, communicate using the container name and its internal port.
+        String containerName = containerManager.getContainerName(container);
+        int internalPort = containerManager.getInternalPort(container);
+
+        return String.format("http://%s:%d%s", containerName, internalPort, isProof ? "/service_output" : "/computation");
     }
 
     /**
@@ -116,27 +115,33 @@ public class ComputationService {
                             inputData.getData() != null ? CommonUtil.decodeInputDataToString(inputData.getData()) : Collections.emptyMap()
                         )
                         .retrieve()
-                        .bodyToMono(Map.class)
+                        .toEntity(String.class) // Receive the response as a String first (including headers)
+                        .map(responseEntity -> {
+                            String body = responseEntity.getBody();
+                            MediaType contentType = responseEntity.getHeaders().getContentType();
+
+                            // If the response is text/plain, wrap it in a Map
+                            if (contentType != null && contentType.isCompatibleWith(MediaType.TEXT_PLAIN)) {
+                                return Map.<String, Object>of("output", body != null ? body : "");
+                            }
+
+                            // If the response is JSON, parse it directly (for future extensibility)
+                            try {
+                                Map<String, Object> parsedJson = new ObjectMapper()
+                                    .readValue(body, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                                // Wrap the parsed JSON map under the "output" key for consistency
+                                return Map.<String, Object>of("output", parsedJson);
+                            } catch (Exception e) {
+                                // If parsing fails, treat it as text
+                                return Map.<String, Object>of("output", body != null ? body : "");
+                            }
+                        })
                         .timeout(Duration.ofMinutes(3))
                         .block();
                     // 성공 결과 추가
-                    results.add(new ContainerOutputDTO(container, response, null));
+                    results.add(new ContainerOutputDTO(container, Objects.requireNonNull(response).get("output"), null));
                     log.info("ComputationId={}, container={}, inputData={}, result=", ComputationId, container, computationInput, response);
                     dataStoreService.trackContainerStatus(container, ContainerStatus.SUCCESS);
-
-                    // 다음 컨테이너를 위한 입력 데이터 준비
-                    if (index < containers.size() - 1) {
-                        inputData = ContainerInputDTO.builder()
-                            .source(ComputationLocation.OFF_CHAIN.toString())
-                            .destination(
-                                index == containers.size() - 2
-                                    ? computationInput.getDestination()
-                                    : ComputationLocation.OFF_CHAIN.toString()
-                            )
-                            .data(response)
-                            .requiresProof(requiresProof)
-                            .build();
-                    }
 
                     // If proof is required, prepare and call the verifier container
                     if (
@@ -324,9 +329,13 @@ public class ComputationService {
         Map<String, CompletableFuture<Map<String, Object>>> futures = new HashMap<>();
 
         for (ApplicationProperties.NoosphereConfig.NoosphereContainer config : configs) {
+            // Use the container's name for inter-container communication, not 'host' variable.
+            String containerName = containerManager.getContainerName(config.getId());
+            int internalPort = containerManager.getInternalPort(config.getId());
+
             String url = modelId
-                .map(id -> String.format("http://%s:%d/service-resources?model_id=%s", host, config.getPort(), id))
-                .orElse(String.format("http://%s:%d/service-resources", host, config.getPort()));
+                .map(id -> String.format("http://%s:%d/service-resources?model_id=%s", containerName, internalPort, id))
+                .orElse(String.format("http://%s:%d/service-resources", containerName, internalPort));
 
             CompletableFuture<Map<String, Object>> future = webClient
                 .get()
