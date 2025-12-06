@@ -4,6 +4,8 @@ services:
   noosphere-agent:
     image: ghcr.io/hpp-io/noosphere-agent:test
     environment:
+      - HPP_RUNTIME=docker
+      - DOCKER_NETWORK=${COMPOSE_PROJECT_NAME}_default
       - _JAVA_OPTIONS=-Xmx512m -Xms256m
       - SPRING_PROFILES_ACTIVE=prod
       - MANAGEMENT_PROMETHEUS_METRICS_EXPORT_ENABLED=true

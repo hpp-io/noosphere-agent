@@ -49,6 +49,12 @@ public class ComputationService {
             // DooD mode: Connect via container name and internal port
             String containerName = containerManager.getContainerName(containerId);
             int internalPort = containerManager.getInternalPort(containerId);
+            log.debug(
+                "Docker container mode detected. Connecting to container Id: {} name: {} port: {}",
+                containerId,
+                containerName,
+                internalPort
+            );
             return String.format("http://%s:%d%s", containerName, internalPort, endpoint);
         } else {
             // Local process mode: Connect via localhost and the host-mapped port
