@@ -2,13 +2,15 @@ package io.hpp.noosphere.agent.service.blockchain;
 
 import static io.hpp.noosphere.agent.service.util.CommonUtil.decodeInputDataToString;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hpp.noosphere.agent.service.ComputationService;
 import io.hpp.noosphere.agent.service.ContainerLookupService;
 import io.hpp.noosphere.agent.service.blockchain.dto.*;
 import io.hpp.noosphere.agent.service.dto.*;
 import io.hpp.noosphere.agent.service.dto.enumeration.ComputationLocation;
 import java.io.IOException;
-import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -486,10 +488,16 @@ public class BlockChainService {
     }
 
     private SerializedOutput serializeContainerOutput(ContainerOutputDTO output) {
-        // Simplified serialization.
-        String outputString = output.getOutput().toString();
         byte[] inputBytes = new byte[0];
-        byte[] outputBytes = outputString.getBytes();
+        byte[] outputBytes;
+        try {
+            // Use ObjectMapper to correctly serialize the output object (String, Map, etc.) to JSON bytes.
+            outputBytes = new ObjectMapper().writeValueAsBytes(output.getOutput());
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize container output, falling back to toString()", e);
+            outputBytes = output.getOutput().toString().getBytes(StandardCharsets.UTF_8);
+        }
+
         byte[] proofBytes = output.getProof() == null ? new byte[0] : output.getProof().getBytes();
         return new SerializedOutput(inputBytes, outputBytes, proofBytes);
     }
