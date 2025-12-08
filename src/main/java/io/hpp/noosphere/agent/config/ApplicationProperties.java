@@ -156,6 +156,8 @@ public class ApplicationProperties {
 
             private String routerAddress;
 
+            private Long processingInterval = 5000L;
+
             @Valid
             @NestedConfigurationProperty
             private Wallet wallet;

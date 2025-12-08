@@ -167,7 +167,7 @@ public class BlockChainService {
     /**
      * Core processing loop, runs every 1000ms.
      */
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(fixedDelayString = "${application.noosphere.chain.processing-interval}")
     public void processActiveSubscriptions() {
         pruneFailedTxs();
         // Process regular subscriptions

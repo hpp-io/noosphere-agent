@@ -288,6 +288,7 @@ application:
       gasConfig:
         price-multiplier: 1.2
         limit-multiplier: 1.3
+      processing-interval: 5000
     # Docker Configuration
     docker:
       username: '${DOCKER_USERNAME:}'
