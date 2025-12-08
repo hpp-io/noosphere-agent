@@ -278,17 +278,8 @@ public class Web3RouterService {
                 }
                 BigInteger lastId = (BigInteger) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(0).getValue();
 
-                // The contract returns the total count, so the highest ID is count - 1.
-                // If count is 0, there are no subscriptions, so we return 0.
-                BigInteger highestId = lastId.equals(BigInteger.ZERO) ? BigInteger.ZERO : lastId.subtract(BigInteger.ONE);
-
-                log.info(
-                    "Retrieved highest subscription ID: {} (from count: {}) at block {}",
-                    highestId,
-                    lastId,
-                    blockNumber != null ? blockNumber : "latest"
-                );
-                return highestId;
+                log.info("Retrieved highest subscription ID: {} at block {}", lastId, blockNumber != null ? blockNumber : "latest");
+                return lastId;
             } catch (Exception e) {
                 log.error("Failed to get last subscription ID", e);
                 throw new RuntimeException("Failed to get last subscription ID", e);
