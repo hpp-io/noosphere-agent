@@ -21,6 +21,7 @@ import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Bool;
 import org.web3j.abi.datatypes.Uint;
+import org.web3j.abi.datatypes.generated.Uint32;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.Hash;
 import org.web3j.protocol.Web3j;
@@ -364,6 +365,17 @@ public class Web3DelegateeCoordinatorService {
                             );
 
                         String result = web3j.ethCall(transaction, blockParameter).send().getValue();
+
+                        // Handle empty results from eth_call to prevent decoding errors
+                        if (result == null || result.equals("0x") || result.isEmpty()) {
+                            log.warn(
+                                "getNodeHasDeliveredResponse received empty result for subId {}, interval {}. Assuming false.",
+                                subscriptionId,
+                                interval
+                            );
+                            return false;
+                        }
+
                         return (Boolean) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(0).getValue();
                     } catch (Exception e) {
                         log.error("Failed to check node response status", e);
@@ -414,6 +426,17 @@ public class Web3DelegateeCoordinatorService {
                             );
 
                         String result = web3j.ethCall(transaction, blockParameter).send().getValue();
+
+                        // Handle empty results from eth_call to prevent decoding errors
+                        if (result == null || result.equals("0x") || result.isEmpty()) {
+                            log.warn(
+                                "getSubscriptionResponseCount received empty result for subId {}, interval {}. Assuming 0.",
+                                subscriptionId,
+                                interval
+                            );
+                            return 0;
+                        }
+
                         return (
                             (BigInteger) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(0).getValue()
                         ).intValue();
@@ -453,15 +476,45 @@ public class Web3DelegateeCoordinatorService {
      */
     public CompletableFuture<DelegateeCoordinator.Commitment> getCommitment(long subscriptionId, long interval) {
         return checkContractLoaded()
-            .thenCompose(contract -> {
-                return contract
-                    .getCommitment(BigInteger.valueOf(subscriptionId), BigInteger.valueOf(interval))
-                    .sendAsync()
-                    .exceptionally(e -> {
+            .thenCompose(contract ->
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        final org.web3j.abi.datatypes.Function function = new org.web3j.abi.datatypes.Function(
+                            DelegateeCoordinator.FUNC_GETCOMMITMENT,
+                            Arrays.asList(new Uint32(subscriptionId), new Uint32(interval)),
+                            Collections.singletonList(new TypeReference<DelegateeCoordinator.Commitment>() {})
+                        );
+                        String encodedFunction = FunctionEncoder.encode(function);
+
+                        org.web3j.protocol.core.methods.request.Transaction transaction =
+                            org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction(
+                                credentials.getAddress(),
+                                contract.getContractAddress(),
+                                encodedFunction
+                            );
+
+                        String result = web3j.ethCall(transaction, DefaultBlockParameter.valueOf("latest")).send().getValue();
+
+                        // Handle empty results from eth_call to prevent decoding errors
+                        if (result == null || result.equals("0x") || result.isEmpty()) {
+                            log.warn(
+                                "getCommitment received empty result for subId {}, interval {}. Returning null.",
+                                subscriptionId,
+                                interval
+                            );
+                            return null; // Return null or an empty Commitment object
+                        }
+
+                        return (DelegateeCoordinator.Commitment) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(
+                            0
+                        );
+                    } catch (Exception e) {
                         log.error("Failed to get commitment for subscription ID {} and interval ID {}", subscriptionId, interval, e);
+                        // Propagate exception to be handled by the caller's exceptionally block
                         throw new RuntimeException("Failed to get commitment", e);
-                    });
-            });
+                    }
+                })
+            );
     }
 
     public CompletableFuture<String> getTypeAndVersion() {

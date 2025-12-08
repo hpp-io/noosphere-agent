@@ -233,10 +233,11 @@ public class BlockChainService {
                                 .getCommitment(id, interval)
                                 .thenApply(commitment -> {
                                     log.debug(
-                                        "sub scription Id: {}, containerId: {}, hasConnmitment: {}",
+                                        "sub scription Id: {}, containerId: {}, hasConnmitment: {}, commitment: {}",
                                         subscription.getId(),
                                         containerLookupService.getContainers(subscription.getContainerId()),
-                                        hasCommitment
+                                        hasCommitment,
+                                        commitment
                                     );
                                     return new ShouldProcessResult(true, coordinator.encodeCommitment(commitment));
                                 });
@@ -315,18 +316,25 @@ public class BlockChainService {
     @Async
     public void pruneFailedTxs() {
         pendingTxs.forEach((runKey, txHash) -> {
+            // "0xblocked"는 이미 처리 중이거나 영구 실패한 작업이므로 건너뜀
             if (!BLOCKED_TX.equals(txHash)) {
+                // 재시도 횟수가 이미 3번 이상이면 더 이상 확인하지 않음
+                if (txAttempts.getOrDefault(runKey, new AtomicInteger(0)).get() >= 3) {
+                    return;
+                }
+
                 coordinator
                     .getTxSuccess(txHash)
                     .thenAccept(txReceipt -> {
                         if (txReceipt != null && !txReceipt.success()) {
                             synchronized (this) {
                                 int attempts = txAttempts.computeIfAbsent(runKey, k -> new AtomicInteger(0)).incrementAndGet();
-                                if (attempts < 3) {
+                                if (attempts >= 3) {
+                                    log.error("Max retries reached for {}. It will be blocked permanently.", runKey);
+                                    pendingTxs.put(runKey, BLOCKED_TX); // 영구적으로 차단
+                                } else {
                                     pendingTxs.remove(runKey);
                                     log.info("Evicted failed tx for {}, retries: {}", runKey, attempts);
-                                } else {
-                                    log.error("Max retries reached for {}. It will be blocked.", runKey);
                                 }
                             }
                         }
@@ -385,6 +393,7 @@ public class BlockChainService {
                 if (txHash != null) {
                     pendingTxs.put(runKey, txHash);
                     log.info("Sent tx for {}: {}", runKey, txHash);
+                    stopTracking(subId, delegated);
                 }
             })
             .exceptionally(e -> {
