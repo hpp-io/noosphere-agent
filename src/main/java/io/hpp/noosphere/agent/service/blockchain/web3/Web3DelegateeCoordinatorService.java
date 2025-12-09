@@ -77,6 +77,7 @@ public class Web3DelegateeCoordinatorService {
 
     /**
      * Example function to query configuration information from the DelegateeCoordinator contract.
+     *
      * @return CompletableFuture containing BillingConfig information
      */
     public CompletableFuture<DelegateeCoordinator.BillingConfig> getConfig() {
@@ -93,6 +94,7 @@ public class Web3DelegateeCoordinatorService {
     /**
      * Get a specific compute subscription by its ID from the Router.
      * Note: Subscription data is stored in the Router, not the Coordinator.
+     *
      * @param subscriptionId The ID of the subscription.
      * @return A CompletableFuture containing the subscription details.
      */
@@ -107,6 +109,7 @@ public class Web3DelegateeCoordinatorService {
 
     /**
      * Get the protocol fee from the DelegateeCoordinator contract.
+     *
      * @return A CompletableFuture containing the protocol fee.
      */
     public CompletableFuture<BigInteger> getProtocolFee() {
@@ -152,7 +155,43 @@ public class Web3DelegateeCoordinatorService {
     }
 
     /**
+     * Simulates a reportComputeResult transaction using eth_call.
+     */
+    public CompletableFuture<Void> simulateReportComputeResult(
+        BigInteger deliveryInterval,
+        byte[] input,
+        byte[] output,
+        byte[] proof,
+        byte[] commitmentData,
+        String agentWallet
+    ) {
+        return checkContractLoaded()
+            .thenCompose(contract ->
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        String encodedFunction = contract
+                            .reportComputeResult(deliveryInterval, input, output, proof, commitmentData, agentWallet)
+                            .encodeFunctionCall();
+
+                        org.web3j.protocol.core.methods.request.Transaction transaction =
+                            org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction(
+                                credentials.getAddress(),
+                                contract.getContractAddress(),
+                                encodedFunction
+                            );
+
+                        web3j.ethCall(transaction, DefaultBlockParameter.valueOf("latest")).send();
+                    } catch (Exception e) {
+                        log.error("Simulation of reportComputeResult failed", e);
+                        throw new RuntimeException("Simulation failed", e);
+                    }
+                })
+            );
+    }
+
+    /**
      * Encodes the transaction data for a reportComputeResult call.
+     *
      * @return The encoded function call as a hex string.
      */
     public String getReportComputeResultTxData(
@@ -318,9 +357,9 @@ public class Web3DelegateeCoordinatorService {
      * Checks if a node has already delivered a response for a given interval at a specific block.
      *
      * @param subscriptionId The ID of the subscription.
-     * @param interval The interval number.
-     * @param nodeAddress The address of the node.
-     * @param blockNumber The block number to query at. If null, queries the latest block.
+     * @param interval       The interval number.
+     * @param nodeAddress    The address of the node.
+     * @param blockNumber    The block number to query at. If null, queries the latest block.
      * @return A CompletableFuture containing true if the node has responded, false otherwise.
      */
     public CompletableFuture<Boolean> getNodeHasDeliveredResponse(
@@ -389,8 +428,8 @@ public class Web3DelegateeCoordinatorService {
      * Gets the number of responses (redundancy count) for a subscription interval at a specific block.
      *
      * @param subscriptionId The ID of the subscription.
-     * @param interval The interval number.
-     * @param blockNumber The block number to query at. If null, queries the latest block.
+     * @param interval       The interval number.
+     * @param blockNumber    The block number to query at. If null, queries the latest block.
      * @return A CompletableFuture containing the redundancy count.
      */
     public CompletableFuture<Integer> getSubscriptionResponseCount(long subscriptionId, long interval, Long blockNumber) {
@@ -470,51 +509,28 @@ public class Web3DelegateeCoordinatorService {
 
     /**
      * Gets the commitment for a specific request ID from the DelegateeCoordinator contract.
+     *
      * @param subscriptionId The ID of the subscription.
      * @param interval
      * @return A CompletableFuture containing the commitment as a byte array.
      */
     public CompletableFuture<DelegateeCoordinator.Commitment> getCommitment(long subscriptionId, long interval) {
-        return checkContractLoaded()
-            .thenCompose(contract ->
-                CompletableFuture.supplyAsync(() -> {
-                    try {
-                        final org.web3j.abi.datatypes.Function function = new org.web3j.abi.datatypes.Function(
-                            DelegateeCoordinator.FUNC_GETCOMMITMENT,
-                            Arrays.asList(new Uint32(subscriptionId), new Uint32(interval)),
-                            Collections.singletonList(new TypeReference<DelegateeCoordinator.Commitment>() {})
-                        );
-                        String encodedFunction = FunctionEncoder.encode(function);
-
-                        org.web3j.protocol.core.methods.request.Transaction transaction =
-                            org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction(
-                                credentials.getAddress(),
-                                contract.getContractAddress(),
-                                encodedFunction
-                            );
-
-                        String result = web3j.ethCall(transaction, DefaultBlockParameter.valueOf("latest")).send().getValue();
-
-                        // Handle empty results from eth_call to prevent decoding errors
-                        if (result == null || result.equals("0x") || result.isEmpty()) {
-                            log.warn(
-                                "getCommitment received empty result for subId {}, interval {}. Returning null.",
-                                subscriptionId,
-                                interval
-                            );
-                            return null; // Return null or an empty Commitment object
-                        }
-
-                        return (DelegateeCoordinator.Commitment) FunctionReturnDecoder.decode(result, function.getOutputParameters()).get(
-                            0
-                        );
-                    } catch (Exception e) {
-                        log.error("Failed to get commitment for subscription ID {} and interval ID {}", subscriptionId, interval, e);
-                        // Propagate exception to be handled by the caller's exceptionally block
-                        throw new RuntimeException("Failed to get commitment", e);
-                    }
-                })
-            );
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                DelegateeCoordinator.Commitment result = delegateeCoordinatorContract
+                    .getCommitment(BigInteger.valueOf(subscriptionId), BigInteger.valueOf(interval))
+                    .send();
+                // Handle empty results from eth_call to prevent decoding errors
+                if (result == null) {
+                    log.warn("getCommitment received empty result for subId {}, interval {}. Returning null.", subscriptionId, interval);
+                    return null; // Return null or an empty Commitment object
+                }
+                return result;
+            } catch (Exception e) {
+                log.error("Failed to get commitment for subscription ID {} and interval ID {}", subscriptionId, interval, e);
+                throw new RuntimeException("Failed to get commitment", e);
+            }
+        });
     }
 
     public CompletableFuture<String> getTypeAndVersion() {
@@ -523,6 +539,7 @@ public class Web3DelegateeCoordinatorService {
 
     /**
      * Checks if the contract is loaded and returns it, or a failed future if not.
+     *
      * @return A CompletableFuture with the loaded contract instance.
      */
     private CompletableFuture<DelegateeCoordinator> checkContractLoaded() {
@@ -535,6 +552,7 @@ public class Web3DelegateeCoordinatorService {
 
     /**
      * Returns the loaded address of the DelegateeCoordinator contract.
+     *
      * @return The contract address as a string, or null if not loaded.
      */
     public String getContractAddress() {

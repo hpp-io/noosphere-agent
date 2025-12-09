@@ -2,6 +2,7 @@ package io.hpp.noosphere.agent.service.blockchain;
 
 import static io.hpp.noosphere.agent.config.Constants.ZERO_ADDRESS;
 
+import com.google.common.base.Supplier;
 import io.hpp.noosphere.agent.config.ApplicationProperties;
 import io.hpp.noosphere.agent.service.NoosphereConfigService;
 import io.hpp.noosphere.agent.service.blockchain.dto.SignatureParamsDTO;
@@ -28,6 +29,8 @@ import org.web3j.tx.response.TransactionReceiptProcessor;
 public class WalletService {
 
     private static final Logger log = LoggerFactory.getLogger(WalletService.class);
+
+    private record SimulationResult(boolean success, boolean needsGasEstimation) {}
 
     private final Web3j web3j;
     private final Web3DelegateeCoordinatorService coordinatorService;
@@ -64,52 +67,6 @@ public class WalletService {
         return walletProperties.getPaymentAddress() != null ? walletProperties.getPaymentAddress() : ZERO_ADDRESS;
     }
 
-    /**
-     * Simulates a transaction call and retries on failure.
-     * @param contractFunction The contract function to simulate.
-     * @param subscription The context subscription for logging.
-     * @return A CompletableFuture that completes with true if the simulation was bypassed due to an allowed error, false otherwise.
-     */
-    private CompletableFuture<Boolean> simulateTransaction(Runnable contractFunction, SubscriptionDTO subscription) {
-        return CompletableFuture.supplyAsync(() -> {
-            for (int i = 0; i < 3; i++) {
-                try {
-                    contractFunction.run();
-                    // If it runs without throwing, simulation is successful
-                    return false;
-                } catch (Exception e) {
-                    // Check for allowed simulation errors
-                    for (String allowedError : walletProperties.getAllowedSimErrors()) {
-                        if (e.getMessage().toLowerCase().contains(allowedError.toLowerCase())) {
-                            log.warn("Bypassing simulation error for subscription {}: {}", subscription.getId(), e.getMessage());
-                            return true; // Bypassed
-                        }
-                    }
-                    // If not an allowed error, log and prepare for retry
-                    log.warn(
-                        "Transaction simulation failed on attempt {} for subscription {}: {}",
-                        i + 1,
-                        subscription.getId(),
-                        e.getMessage()
-                    );
-                    if (i == 2) { // Last attempt
-                        // In a real scenario, you might want to re-throw a specific exception
-                        // For simplicity, we'll re-throw the last caught exception.
-                        throw new RuntimeException("Transaction simulation failed after 3 attempts", e);
-                    }
-                    try {
-                        Thread.sleep(500); // Delay before retry
-                    } catch (InterruptedException interruptedException) {
-                        Thread.currentThread().interrupt();
-                        throw new RuntimeException(interruptedException);
-                    }
-                }
-            }
-            // Should not be reached
-            throw new IllegalStateException("Simulation loop finished without returning a value.");
-        });
-    }
-
     public CompletableFuture<String> deliverCompute(
         SubscriptionDTO subscription,
         long interval,
@@ -118,47 +75,29 @@ public class WalletService {
         byte[] proof,
         byte[] commitmentData
     ) {
-        Runnable simulation = () -> {
-            try {
-                coordinatorService
-                    .reportComputeResult(BigInteger.valueOf(interval), input, output, proof, commitmentData, getPaymentAddress())
-                    .join(); // .send() on a read-only call simulates it
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        };
+        // Supplier for the simulation logic
+        Supplier<CompletableFuture<Void>> simulationSupplier = () ->
+            coordinatorService.simulateReportComputeResult(
+                BigInteger.valueOf(interval),
+                input,
+                output,
+                proof,
+                commitmentData,
+                getPaymentAddress()
+            );
 
-        return simulateTransaction(simulation, subscription).thenCompose(skipped -> {
-            if (skipped) {
-                // If simulation was skipped due to an allowed error, send with a fixed gas limit
-                return sendTransactionWithLock(
-                    () ->
-                        coordinatorService.getReportComputeResultTxData(
-                            BigInteger.valueOf(subscription.getInterval()),
-                            input,
-                            output,
-                            proof,
-                            commitmentData,
-                            getPaymentAddress()
-                        ),
-                    walletProperties.getMaxGasLimit().longValue()
-                );
-            } else {
-                // Otherwise, let web3j estimate the gas
-                return sendTransactionWithLock(
-                    () ->
-                        coordinatorService.getReportComputeResultTxData(
-                            BigInteger.valueOf(subscription.getInterval()),
-                            input,
-                            output,
-                            proof,
-                            commitmentData,
-                            getPaymentAddress()
-                        ),
-                    null // Gas limit will be estimated
-                );
-            }
-        });
+        // Supplier for the actual transaction data
+        Supplier<String> txDataSupplier = () ->
+            coordinatorService.getReportComputeResultTxData(
+                BigInteger.valueOf(interval),
+                input,
+                output,
+                proof,
+                commitmentData,
+                getPaymentAddress()
+            );
+
+        return simulateAndSend(simulationSupplier, txDataSupplier, subscription);
     }
 
     public CompletableFuture<String> deliverComputeDelegatee(
@@ -168,41 +107,94 @@ public class WalletService {
         byte[] output,
         byte[] proof
     ) {
-        Runnable simulation = () -> {
-            try {
-                coordinatorService
-                    .simulateReportDelegatedComputeResult(
-                        subscription,
-                        signature,
-                        BigInteger.valueOf(subscription.getInterval()),
-                        input,
-                        output,
-                        proof,
-                        getPaymentAddress()
-                    )
-                    .join();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        };
+        // Supplier for the simulation logic
+        Supplier<CompletableFuture<Void>> simulationSupplier = () ->
+            coordinatorService.simulateReportDelegatedComputeResult(
+                subscription,
+                signature,
+                BigInteger.valueOf(subscription.getInterval()),
+                input,
+                output,
+                proof,
+                getPaymentAddress()
+            );
 
-        return simulateTransaction(simulation, subscription).thenCompose(skipped -> {
-            java.util.function.Supplier<String> txDataSupplier = () ->
-                coordinatorService.getReportDelegatedComputeResultTxData(
-                    subscription,
-                    signature,
-                    BigInteger.valueOf(subscription.getInterval()),
-                    input,
-                    output,
-                    proof,
-                    getPaymentAddress()
-                );
+        // Supplier for the actual transaction data
+        Supplier<String> txDataSupplier = () ->
+            coordinatorService.getReportDelegatedComputeResultTxData(
+                subscription,
+                signature,
+                BigInteger.valueOf(subscription.getInterval()),
+                input,
+                output,
+                proof,
+                getPaymentAddress()
+            );
 
-            if (skipped) {
-                return sendTransactionWithLock(txDataSupplier, walletProperties.getMaxGasLimit().longValue());
+        return simulateAndSend(simulationSupplier, txDataSupplier, subscription);
+    }
+
+    /**
+     * A generic method to first simulate and then send a transaction.
+     *
+     * @param simulationSupplier A supplier for the async simulation task.
+     * @param txDataSupplier     A supplier for the transaction data payload.
+     * @param subscription       The context subscription for logging.
+     * @return A CompletableFuture containing the transaction hash.
+     */
+    private CompletableFuture<String> simulateAndSend(
+        Supplier<CompletableFuture<Void>> simulationSupplier,
+        Supplier<String> txDataSupplier,
+        SubscriptionDTO subscription
+    ) {
+        // First, run the simulation with retries
+        return trySimulation(simulationSupplier, subscription).thenCompose(simulationResult -> {
+            // If simulation was successful, proceed to send the transaction
+            if (simulationResult.success()) {
+                Long gasLimit = simulationResult.needsGasEstimation() ? null : walletProperties.getMaxGasLimit().longValue();
+                return sendTransactionWithLock(txDataSupplier, gasLimit);
             } else {
-                return sendTransactionWithLock(txDataSupplier, null);
+                // If simulation failed permanently, complete with an exception
+                return CompletableFuture.failedFuture(new RuntimeException("Transaction simulation failed permanently."));
             }
+        });
+    }
+
+    /**
+     * Tries to run the simulation up to 3 times.
+     *
+     * @param simulationSupplier A supplier for the async simulation task.
+     * @param subscription       The context subscription for logging.
+     * @return A CompletableFuture with a SimulationResult.
+     */
+    private CompletableFuture<SimulationResult> trySimulation(
+        Supplier<CompletableFuture<Void>> simulationSupplier,
+        SubscriptionDTO subscription
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            for (int i = 0; i < 3; i++) {
+                try {
+                    simulationSupplier.get().join(); // Execute and wait for simulation
+                    return new SimulationResult(true, true); // Success, needs gas estimation
+                } catch (Exception e) {
+                    // Check for allowed simulation errors
+                    for (String allowedError : walletProperties.getAllowedSimErrors()) {
+                        if (e.getMessage() != null && e.getMessage().toLowerCase().contains(allowedError.toLowerCase())) {
+                            log.warn("Bypassing simulation error for subscription {}: {}", subscription.getId(), e.getMessage());
+                            return new SimulationResult(true, false); // Success, but bypassed, use fixed gas
+                        }
+                    }
+                    log.warn("Simulation attempt {} failed for {}: {}", i + 1, subscription.getId(), e.getMessage());
+                    if (i == 2) { // Last attempt
+                        throw new RuntimeException("Transaction simulation failed after 3 attempts", e);
+                    }
+                    // Wait before retrying
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException ignored) {}
+                }
+            }
+            throw new IllegalStateException("Simulation loop finished unexpectedly.");
         });
     }
 
@@ -212,7 +204,7 @@ public class WalletService {
      * @param gasLimit A specific gas limit, or null to let web3j estimate it.
      * @return A CompletableFuture containing the transaction hash.
      */
-    private CompletableFuture<String> sendTransactionWithLock(java.util.function.Supplier<String> txDataSupplier, Long gasLimit) {
+    private CompletableFuture<String> sendTransactionWithLock(Supplier<String> txDataSupplier, Long gasLimit) {
         return CompletableFuture.supplyAsync(() -> {
             txLock.lock();
             try {

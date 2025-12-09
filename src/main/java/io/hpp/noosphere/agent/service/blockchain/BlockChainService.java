@@ -175,6 +175,8 @@ public class BlockChainService {
             shouldProcessOnChain(subId, onchainRequest.getSubscription()).thenAccept(result -> {
                 if (result.should()) {
                     processSubscription(subId, onchainRequest.getSubscription(), false, null, result.commitment());
+                } else {
+                    stopTracking(subId, false);
                 }
             });
         });
@@ -233,17 +235,19 @@ public class BlockChainService {
                                 .getCommitment(id, interval)
                                 .thenApply(commitment -> {
                                     log.debug(
-                                        "sub scription Id: {}, containerId: {}, hasConnmitment: {}, commitment: {}",
+                                        "sub scription Id: {}, containerId: {}, hasCommitment: {}, commitment: {}",
                                         subscription.getId(),
                                         containerLookupService.getContainers(subscription.getContainerId()),
                                         hasCommitment,
                                         commitment
                                     );
-                                    return new ShouldProcessResult(true, coordinator.encodeCommitment(commitment));
+                                    // If the commitment is null (meaning no valid commitment was found on-chain),
+                                    // we should not process.
+                                    boolean shouldProcess = commitment != null;
+                                    byte[] encodedCommitment = shouldProcess ? coordinator.encodeCommitment(commitment) : null;
+                                    return new ShouldProcessResult(shouldProcess, encodedCommitment);
                                 });
                         } else {
-                            // If no commitment, no need to process.
-                            pendingTxs.remove(runKey);
                             return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
                         }
                     });
@@ -376,33 +380,24 @@ public class BlockChainService {
                 if (results.isEmpty() || results.get(results.size() - 1) instanceof ContainerErrorDTO) {
                     log.error("Container execution failed for {}: {}", runKey, results);
                     pendingTxs.remove(runKey); // Unblock for retry
-                    if (subscription.isCallback()) {
-                        stopTracking(subId, delegated);
-                    }
                     return CompletableFuture.completedFuture(null); // End chain
                 }
 
                 ContainerOutputDTO lastResult = (ContainerOutputDTO) results.get(results.size() - 1);
                 log.info("Container execution succeeded for {}", runKey);
-
                 // Serialize output and deliver transaction
                 SerializedOutput serialized = serializeContainerOutput(lastResult);
-                return deliver(subscription, interval, delegated, delegatedParams, serialized, commitment);
+                return deliver(subscription, interval, delegated, delegatedParams, serialized, commitment).exceptionally(ex -> {
+                    log.error("Failed to deliver transaction for {}: {}", runKey, ex.getMessage());
+                    stopTracking(subId, delegated);
+                    return null; // Stop the chain
+                });
             })
             .thenAccept(txHash -> {
                 if (txHash != null) {
-                    pendingTxs.put(runKey, txHash);
                     log.info("Sent tx for {}: {}", runKey, txHash);
                     stopTracking(subId, delegated);
                 }
-            })
-            .exceptionally(e -> {
-                log.error("Failed to process subscription {}: {}", runKey, e.getMessage());
-                pendingTxs.remove(runKey); // Unblock for retry
-                if (subscription.isCallback()) {
-                    stopTracking(subId, delegated);
-                }
-                return null;
             });
     }
 
