@@ -44,11 +44,16 @@ public class HubKeepAliveService {
     @Scheduled(fixedDelayString = "${application.noosphere.hub.keep-alive.interval-ms}")
     public void sendKeepAlive() {
         ApplicationProperties.NoosphereConfig.Hub hubConfig = applicationProperties.getNoosphere().getHub();
-        if (hubConfig == null || !hubConfig.getKeepAlive().getEnabled() || agentService.findFirst().isEmpty()) {
+        if (
+            hubConfig == null ||
+            !hubConfig.getKeepAlive().getEnabled() ||
+            agentService.getRegisteredAgent() == null ||
+            agentService.getRegisteredAgent().getId() == null
+        ) {
             // Keep-alive is disabled, do nothing.
             return;
         }
-        AgentDTO agentDTO = agentService.findFirst().get();
+        AgentDTO agentDTO = agentService.getRegisteredAgent();
         log.debug("agent: {}", agentDTO);
         String agentId = agentDTO.getId().toString();
         String hubUrl = hubConfig.getUrl();
