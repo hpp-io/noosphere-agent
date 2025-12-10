@@ -149,7 +149,7 @@ public class ComputationService {
                                 return Map.<String, Object>of("output", body != null ? body : "");
                             }
                         })
-                        .timeout(Duration.ofMinutes(3))
+                        .timeout(Duration.ofMinutes(4))
                         .block();
                     // 성공 결과 추가
                     results.add(new ContainerOutputDTO(container, Objects.requireNonNull(response).get("output"), null));

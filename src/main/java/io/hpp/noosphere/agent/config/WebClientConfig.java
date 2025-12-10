@@ -19,7 +19,7 @@ public class WebClientConfig {
             // HTTP 클라이언트 설정
             .clientConnector(
                 new ReactorClientHttpConnector(
-                    HttpClient.create().option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000).responseTimeout(Duration.ofSeconds(30))
+                    HttpClient.create().option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000).responseTimeout(Duration.ofSeconds(180))
                 )
             )
             // 메모리 버퍼 크기
