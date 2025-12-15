@@ -4,6 +4,8 @@ import io.hpp.noosphere.agent.service.NoosphereConfigService;
 import io.hpp.noosphere.agent.service.blockchain.KeystoreService;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import okhttp3.OkHttpClient;
 import org.springframework.context.annotation.Bean;
@@ -45,7 +47,13 @@ public class Web3jConfig {
             .writeTimeout(writeTimeout, TimeUnit.MILLISECONDS);
 
         HttpService httpService = new HttpService(rpcUrl, clientBuilder.build());
-        return Web3j.build(httpService);
+
+        // 이벤트 폴링 간격 설정 (processing-interval 설정 사용)
+        long pollingInterval = chainConfig.getProcessingInterval() != null ? chainConfig.getProcessingInterval() : 5000L; // 기본값 5초
+
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+
+        return Web3j.build(httpService, pollingInterval, scheduledExecutorService);
     }
 
     /**
