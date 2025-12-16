@@ -445,7 +445,7 @@ public class BlockChainService {
                 subscription.hasVerifier(),
                 requestId,
                 commitment,
-                delegated ? delegatedParams.subscription() : null
+                delegated ? delegatedParams.subscription() : subscription
             );
         });
     }
