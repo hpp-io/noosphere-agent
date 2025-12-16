@@ -285,6 +285,24 @@ public class ContainerManagerService {
     }
 
     /**
+     * Gets the container ID that matches the given verifier address.
+     * @param verifierAddress The verifier contract address to match.
+     * @return The container ID if found, null otherwise.
+     */
+    public String getContainerIdByVerifierAddress(String verifierAddress) {
+        if (verifierAddress == null || verifierAddress.isEmpty()) {
+            return null;
+        }
+
+        return configs
+            .stream()
+            .filter(config -> verifierAddress.equalsIgnoreCase(config.getVerifierAddress()))
+            .findFirst()
+            .map(ApplicationProperties.NoosphereConfig.NoosphereContainer::getId)
+            .orElse(null);
+    }
+
+    /**
      * Container setup and execution
      */
     public void initializeContainers() {

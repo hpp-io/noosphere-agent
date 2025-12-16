@@ -39,6 +39,17 @@ public class ComputationService {
     }
 
     /**
+     * 컨테이너의 서비스 URL을 가져옵니다 (verifier 주소로 컨테이너를 찾아서)
+     */
+    private String getProofContainerUrl(String verifierAddress) {
+        String proofContainerId = containerManager.getContainerIdByVerifierAddress(verifierAddress);
+        if (proofContainerId == null) {
+            throw new IllegalStateException("No proof-creator container found for verifier address: " + verifierAddress);
+        }
+        return getContainerUrl(proofContainerId, true);
+    }
+
+    /**
      * 컨테이너의 서비스 URL을 가져옵니다
      */
     private String getContainerUrl(String containerId, boolean isProof) {
@@ -180,9 +191,16 @@ public class ComputationService {
                             isOffChain ? subscriptionDTO.toCoordinatorComputeSubscription() : null
                         );
 
-                        String proofurl = getContainerUrl(container, true);
-                        // You would then call the verifier container with `proofInput`
-                        // For now, we just log it.
+                        // Get the verifier address from subscription and find the corresponding proof-creator container
+                        String verifierAddress = subscriptionDTO != null ? subscriptionDTO.getVerifier() : null;
+                        if (verifierAddress == null || verifierAddress.isEmpty()) {
+                            throw new IllegalStateException(
+                                "Verifier address is required for proof generation but not provided in subscription"
+                            );
+                        }
+
+                        String proofurl = getProofContainerUrl(verifierAddress);
+                        log.debug("Proof container URL: {}", proofurl);
                         log.debug("Proof Input DTO: {}", proofInput);
 
                         String proofResponse = webClient
