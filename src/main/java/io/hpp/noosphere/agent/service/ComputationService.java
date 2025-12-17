@@ -54,7 +54,7 @@ public class ComputationService {
      */
     private String getContainerUrl(String containerId, boolean isProof) {
         String runtimeEnv = System.getenv("HPP_RUNTIME");
-        String endpoint = isProof ? "/service_output" : "/computation";
+        String endpoint = isProof ? "/api/service_output" : "/computation";
 
         if ("docker".equals(runtimeEnv)) {
             // DooD mode: Connect via container name and internal port
@@ -121,7 +121,7 @@ public class ComputationService {
 
             log.debug("Initial input.data (decoded): {}", CommonUtil.decodeInputDataToString(computationInput.getData()));
             // 컨테이너 체인 실행
-            for (int index = 0; index < (requiresProof ? containers.size() + 1 : containers.size()); index++) {
+            for (int index = 0; index < containers.size(); index++) {
                 String container = containers.get(index);
                 log.debug("container id: {}, input.data: {}", container, CommonUtil.decodeInputDataToString(inputData.getData()));
                 String url = getContainerUrl(container, false);
@@ -163,7 +163,8 @@ public class ComputationService {
                         .timeout(Duration.ofMinutes(4))
                         .block();
                     // 성공 결과 추가
-                    results.add(new ContainerOutputDTO(container, Objects.requireNonNull(response).get("output"), null));
+                    Object inputs = inputData.getData();
+                    results.add(new ContainerOutputDTO(container, Objects.requireNonNull(response).get("output"), null, inputs));
                     log.info(
                         "ComputationId={}, container={}, inputData={}, result={}",
                         ComputationId,
@@ -206,17 +207,51 @@ public class ComputationService {
                         String proofResponse = webClient
                             .post()
                             .uri(proofurl)
-                            .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                            .headers(httpHeaders -> {
+                                headers.forEach(httpHeaders::set);
+                                httpHeaders.set("Host", "localhost:3000");
+                            })
                             .contentType(MediaType.APPLICATION_JSON)
-                            .bodyValue(proofInput)
+                            .bodyValue(Map.of("data", proofInput))
                             .retrieve()
                             .bodyToMono(String.class)
                             .timeout(Duration.ofMinutes(3))
                             .block();
+
+                        log.info(
+                            "Proof response received from container. Length: {}, starts with 0x: {}",
+                            proofResponse != null ? proofResponse.length() : 0,
+                            proofResponse != null && proofResponse.startsWith("0x")
+                        );
+                        log.debug(
+                            "Proof response content (first 100 chars): {}",
+                            proofResponse != null && proofResponse.length() > 100 ? proofResponse.substring(0, 100) : proofResponse
+                        );
+
+                        // Extract the "proof" field from JSON response (like JavaScript does: responseData.proof)
+                        String extractedProof = proofResponse;
+                        if (proofResponse != null && proofResponse.trim().startsWith("{")) {
+                            try {
+                                ObjectMapper mapper = new ObjectMapper();
+                                Map<String, Object> responseMap = mapper.readValue(proofResponse, Map.class);
+                                if (responseMap.containsKey("proof")) {
+                                    extractedProof = (String) responseMap.get("proof");
+                                    log.info(
+                                        "Extracted 'proof' field from JSON response: {}",
+                                        extractedProof != null && extractedProof.length() > 50
+                                            ? extractedProof.substring(0, 50) + "..."
+                                            : extractedProof
+                                    );
+                                }
+                            } catch (Exception e) {
+                                log.warn("Failed to parse proof response as JSON, using raw response: {}", e.getMessage());
+                            }
+                        }
+
                         // Cast the last result to ContainerOutputDTO to set the proof.
                         ContainerResultDTO lastResult = results.getLast();
                         if (lastResult instanceof ContainerOutputDTO) {
-                            ((ContainerOutputDTO) lastResult).setProof(proofResponse);
+                            ((ContainerOutputDTO) lastResult).setProof(extractedProof);
                             log.info("Proof generated and attached to the result.");
                         }
                     }
@@ -336,7 +371,7 @@ public class ComputationService {
                 try {
                     String finalResult = new String(concatenateChunks(chunks));
                     Map<String, Object> output = Map.of("output", finalResult);
-                    List<ContainerResultDTO> results = List.of(new ContainerOutputDTO(container, output, null));
+                    List<ContainerResultDTO> results = List.of(new ContainerOutputDTO(container, output, null, null));
 
                     dataStoreService.setSuccess(request, results);
                     dataStoreService.trackContainerStatus(container, ContainerStatus.SUCCESS);
@@ -427,12 +462,44 @@ public class ComputationService {
         String requestIdHex = Numeric.toHexString(requestId);
         String commitmentHex = Numeric.toHexString(commitment);
 
-        String inputString = new ObjectMapper().writeValueAsString(Input);
+        // IMPORTANT: Match JavaScript behavior - use the raw string representation, not JSON
+        // JavaScript: ethers.hexlify(ethers.toUtf8Bytes(inputs))
+        // If Input is a String, use it directly; otherwise JSON-serialize
+        String inputString;
+        if (Input.size() == 1 && Input.containsKey("hex_data")) {
+            // For hex_data, keep as JSON (this is already structured data)
+            inputString = new ObjectMapper().writeValueAsString(Input);
+        } else {
+            inputString = new ObjectMapper().writeValueAsString(Input);
+        }
         String inputHex = Numeric.toHexString(inputString.getBytes(StandardCharsets.UTF_8));
 
-        // Assuming the output map needs to be serialized to a string first
-        String outputString = new ObjectMapper().writeValueAsString(output);
+        // Extract the actual output value from the response map
+        // response is Map.of("output", actualValue) from line 149/157/160
+        Object actualOutput = output.containsKey("output") ? output.get("output") : output;
+
+        // For output: match JavaScript behavior - if it's a string, use it directly
+        // JavaScript: ethers.hexlify(ethers.toUtf8Bytes(output))
+        String outputString;
+        if (actualOutput instanceof String) {
+            // Direct string output - matches JavaScript behavior
+            outputString = (String) actualOutput;
+            log.info(
+                "buildProofInput - using raw string output: '{}'",
+                outputString.length() > 50 ? outputString.substring(0, 50) + "..." : outputString
+            );
+        } else {
+            // Complex object, use JSON
+            outputString = new ObjectMapper().writeValueAsString(actualOutput);
+            log.info("buildProofInput - JSON-serialized complex output, type: {}", actualOutput.getClass().getSimpleName());
+        }
         String outputHex = Numeric.toHexString(outputString.getBytes(StandardCharsets.UTF_8));
+
+        log.info(
+            "buildProofInput - outputHex (first 66 chars): {}, full length: {}",
+            outputHex.length() > 66 ? outputHex.substring(0, 66) + "..." : outputHex,
+            outputHex.length()
+        );
 
         String subscriptionString = new ObjectMapper().writeValueAsString(subscription);
         String subscriptionHex = Numeric.toHexString(subscriptionString.getBytes(StandardCharsets.UTF_8));

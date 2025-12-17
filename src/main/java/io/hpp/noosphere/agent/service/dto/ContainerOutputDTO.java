@@ -11,4 +11,5 @@ public class ContainerOutputDTO implements ContainerResultDTO {
     private String container;
     private Object output;
     private String proof;
+    private Object inputs;
 }

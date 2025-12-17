@@ -7,16 +7,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.hpp.noosphere.agent.service.ComputationService;
 import io.hpp.noosphere.agent.service.ContainerLookupService;
 import io.hpp.noosphere.agent.service.blockchain.dto.*;
+import io.hpp.noosphere.agent.service.blockchain.web3.Web3SubscriptionBatchReaderService;
 import io.hpp.noosphere.agent.service.dto.*;
 import io.hpp.noosphere.agent.service.dto.enumeration.ComputationLocation;
+import io.hpp.noosphere.agent.service.mapper.SubscriptionMapper;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -37,6 +39,8 @@ public class BlockChainService {
     private final WalletService wallet;
     private final ComputationService computationService;
     private final ContainerLookupService containerLookupService;
+    private final Web3SubscriptionBatchReaderService batchReaderService;
+    private final SubscriptionMapper subscriptionMapper;
 
     // State management using thread-safe collections
     private final Map<OnchainSubscriptionId, OnchainRequestDTO> onChainRequests = new ConcurrentHashMap<>();
@@ -49,13 +53,17 @@ public class BlockChainService {
         CoordinatorService coordinator,
         WalletService wallet,
         ComputationService computationService,
-        ContainerLookupService containerLookupService
+        ContainerLookupService containerLookupService,
+        Web3SubscriptionBatchReaderService batchReaderService,
+        SubscriptionMapper subscriptionMapper
     ) {
         this.web3j = web3j;
         this.coordinator = coordinator;
         this.wallet = wallet;
         this.computationService = computationService;
         this.containerLookupService = containerLookupService;
+        this.batchReaderService = batchReaderService;
+        this.subscriptionMapper = subscriptionMapper;
     }
 
     /**
@@ -64,9 +72,19 @@ public class BlockChainService {
     @Async
     public CompletableFuture<Void> processIncomingRequest(BaseRequestDTO request) {
         if (request instanceof OnchainRequestDTO onchainRequestDTO) {
+            log.info(
+                "Processing ONCHAIN request - subscriptionId: {}, interval: {}",
+                onchainRequestDTO.getSubscription().getId(),
+                onchainRequestDTO.getCommitment().interval
+            );
             ProcessOnchainRequest(onchainRequestDTO);
             return CompletableFuture.completedFuture(null);
         } else if (request instanceof DelegatedRequestDTO delegatedRequestDTO) {
+            log.info(
+                "Processing DELEGATED request - subscriptionId: {}, client: {}",
+                delegatedRequestDTO.getSubscription().getId(),
+                delegatedRequestDTO.getSubscription().getClient()
+            );
             return ProcessDelegatedRequest(delegatedRequestDTO);
         } else {
             log.error("Unknown request type to track: {}", request);
@@ -165,7 +183,79 @@ public class BlockChainService {
     }
 
     /**
-     * Core processing loop, runs every 1000ms.
+     * Refreshes subscription cache from blockchain every 30 seconds using batch reading.
+     * This detects cancelled or modified subscriptions efficiently with minimal RPC calls.
+     */
+    @Scheduled(fixedDelay = 30000) // Every 30 seconds
+    public void refreshSubscriptionCache() {
+        if (onChainRequests.isEmpty()) {
+            return;
+        }
+
+        try {
+            // Get all subscription IDs to refresh
+            List<Long> subIds = onChainRequests
+                .keySet()
+                .stream()
+                .map(OnchainSubscriptionId::id)
+                .sorted()
+                .distinct()
+                .collect(Collectors.toList());
+
+            if (subIds.isEmpty()) {
+                return;
+            }
+
+            int minId = subIds.get(0).intValue();
+            int maxId = subIds.get(subIds.size() - 1).intValue();
+            long currentBlock = web3j.ethBlockNumber().send().getBlockNumber().longValue();
+
+            log.debug("Batch refreshing {} subscriptions (IDs {}-{}) from blockchain", subIds.size(), minId, maxId);
+
+            // Batch read all subscriptions
+            batchReaderService
+                .getSubscriptions(minId, maxId, currentBlock)
+                .thenAccept(subscriptions -> {
+                    // Create a map of subscription ID -> subscription for quick lookup
+                    // Batch reader returns subscriptions in order from minId to maxId
+                    Map<Long, SubscriptionDTO> freshSubsMap = new HashMap<>();
+                    for (int i = 0; i < subscriptions.size(); i++) {
+                        long subscriptionId = minId + i;
+                        var contractSub = subscriptions.get(i);
+                        SubscriptionDTO dto = subscriptionMapper.toDto(subscriptionId, contractSub, containerLookupService);
+                        freshSubsMap.put(subscriptionId, dto);
+                    }
+
+                    // Update cache for each tracked subscription
+                    onChainRequests.forEach((subId, onchainRequest) -> {
+                        SubscriptionDTO freshSub = freshSubsMap.get(subId.id());
+
+                        if (freshSub == null || freshSub.isCancelled()) {
+                            log.info("Subscription {} no longer exists or is cancelled. Will stop tracking on next cycle.", subId);
+                            // Mark for removal by updating with a cancelled subscription
+                            if (onchainRequest.getSubscription() != null) {
+                                onchainRequest.getSubscription().setClient("0x0000000000000000000000000000000000000000");
+                            }
+                        } else {
+                            // Update cache with fresh data
+                            onchainRequest.setSubscription(freshSub);
+                            log.debug("Refreshed subscription {} cache from blockchain", subId);
+                        }
+                    });
+
+                    log.info("Batch refreshed {} subscriptions from blockchain", subIds.size());
+                })
+                .exceptionally(ex -> {
+                    log.warn("Failed to batch refresh subscriptions from blockchain: {}", ex.getMessage());
+                    return null;
+                });
+        } catch (Exception ex) {
+            log.error("Error during subscription cache refresh: {}", ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Core processing loop, runs every 5 seconds.
      */
     @Scheduled(fixedDelayString = "${application.noosphere.chain.processing-interval}")
     public void processActiveSubscriptions() {
@@ -195,6 +285,12 @@ public class BlockChainService {
         // Ensure the identifier is the correct type before casting
         if (!(subId instanceof OnchainSubscriptionId onchainSubId)) {
             log.warn("shouldProcessOnChain called with incorrect subscription identifier type: {}", subId.getClass().getName());
+            return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
+        }
+
+        // Check if subscription is cancelled (empty/zero values from blockchain)
+        if (subscription.isCancelled()) {
+            log.info("Subscription {} is cancelled (client address is zero or empty). Stopping processing.", subId);
             return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
         }
 
@@ -260,6 +356,12 @@ public class BlockChainService {
         boolean isDelegated
     ) {
         if (!subscription.isActive()) {
+            return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
+        }
+
+        // Check if subscription is cancelled (empty/zero values from blockchain)
+        if (subscription.isCancelled()) {
+            log.info("Subscription {} is cancelled (client address is zero or empty). Stopping processing.", subId);
             return CompletableFuture.completedFuture(new ShouldProcessResult(false, null));
         }
 
@@ -438,6 +540,13 @@ public class BlockChainService {
                 containerLookupService.getContainers(subscription.getContainerId()),
                 decodeInputDataToString(computationInput.getData())
             );
+            log.debug(
+                "Subscription {} hasVerifier={} verifier={} delegated={}",
+                subscription.getId(),
+                subscription.hasVerifier(),
+                subscription.getVerifier(),
+                delegated
+            );
             return computationService.processChainProcessorComputation(
                 UUID.randomUUID(),
                 computationInput,
@@ -458,7 +567,24 @@ public class BlockChainService {
         SerializedOutput serializedOutput,
         byte[] commitment
     ) {
+        log.info(
+            "deliver() called - subscriptionId: {}, interval: {}, delegated: {}, hasVerifier: {}, verifier: {}",
+            subscription.getId(),
+            interval,
+            delegated,
+            subscription.hasVerifier(),
+            subscription.getVerifier()
+        );
+
+        if (!delegated) {
+            log.info("Commitment data - length: {}, isNull: {}", commitment != null ? commitment.length : 0, commitment == null);
+            if (commitment == null || commitment.length == 0) {
+                log.error("CRITICAL: Commitment data is null or empty for subscription {}, interval {}", subscription.getId(), interval);
+            }
+        }
+
         if (delegated) {
+            log.info("Using DELEGATED path - calling reportDelegatedComputeResult");
             return wallet.deliverComputeDelegatee(
                 subscription,
                 delegatedParams.signature(),
@@ -467,6 +593,7 @@ public class BlockChainService {
                 serializedOutput.proof()
             );
         } else {
+            log.info("Using NORMAL path - calling reportComputeResult with proof");
             return wallet.deliverCompute(
                 subscription,
                 interval,
@@ -492,18 +619,171 @@ public class BlockChainService {
     }
 
     private SerializedOutput serializeContainerOutput(ContainerOutputDTO output) {
-        byte[] inputBytes = new byte[0];
+        byte[] inputBytes;
+        // For String inputs, use the raw string bytes to match proof container hashing
+        // For complex objects (Map, List, etc.), use JSON serialization
+        if (output.getInputs() instanceof String) {
+            String inputStr = (String) output.getInputs();
+            inputBytes = inputStr.getBytes(StandardCharsets.UTF_8);
+            log.info(
+                "Using raw string bytes for input: length={}, sha3=0x{}",
+                inputBytes.length,
+                org.web3j.utils.Numeric.toHexStringNoPrefix(org.web3j.crypto.Hash.sha3(inputBytes))
+            );
+        } else {
+            try {
+                // Use ObjectMapper to correctly serialize the input object (Map, List, etc.) to JSON bytes.
+                inputBytes = new ObjectMapper().writeValueAsBytes(output.getInputs());
+                log.info(
+                    "Serialized input using JSON: length={}, input type={}, sha3=0x{}",
+                    inputBytes.length,
+                    output.getInputs().getClass().getSimpleName(),
+                    org.web3j.utils.Numeric.toHexStringNoPrefix(org.web3j.crypto.Hash.sha3(inputBytes))
+                );
+            } catch (JsonProcessingException e) {
+                log.error("Failed to serialize container input, falling back to toString()", e);
+                inputBytes = output.getInputs().toString().getBytes(StandardCharsets.UTF_8);
+            }
+        }
         byte[] outputBytes;
-        try {
-            // Use ObjectMapper to correctly serialize the output object (String, Map, etc.) to JSON bytes.
-            outputBytes = new ObjectMapper().writeValueAsBytes(output.getOutput());
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize container output, falling back to toString()", e);
-            outputBytes = output.getOutput().toString().getBytes(StandardCharsets.UTF_8);
+        // For String outputs, use the raw string bytes to match proof container hashing
+        // For complex objects (Map, List, etc.), use JSON serialization
+        if (output.getOutput() instanceof String) {
+            String outputStr = (String) output.getOutput();
+            outputBytes = outputStr.getBytes(StandardCharsets.UTF_8);
+            log.info(
+                "Using raw string bytes for output: length={}, sha3=0x{}",
+                outputBytes.length,
+                org.web3j.utils.Numeric.toHexStringNoPrefix(org.web3j.crypto.Hash.sha3(outputBytes))
+            );
+        } else {
+            try {
+                // Use ObjectMapper to correctly serialize the output object (Map, List, etc.) to JSON bytes.
+                outputBytes = new ObjectMapper().writeValueAsBytes(output.getOutput());
+                log.info(
+                    "Serialized output using JSON: length={}, output type={}, sha3=0x{}",
+                    outputBytes.length,
+                    output.getOutput().getClass().getSimpleName(),
+                    org.web3j.utils.Numeric.toHexStringNoPrefix(org.web3j.crypto.Hash.sha3(outputBytes))
+                );
+            } catch (JsonProcessingException e) {
+                log.error("Failed to serialize container output, falling back to toString()", e);
+                outputBytes = output.getOutput().toString().getBytes(StandardCharsets.UTF_8);
+            }
         }
 
-        byte[] proofBytes = output.getProof() == null ? new byte[0] : output.getProof().getBytes();
+        byte[] proofBytes;
+        if (output.getProof() == null || output.getProof().isEmpty()) {
+            proofBytes = new byte[0];
+        } else {
+            String proofStr = output.getProof();
+            // If proof is a hex string (starts with 0x), decode it properly
+            if (proofStr.startsWith("0x") || proofStr.startsWith("0X")) {
+                try {
+                    proofBytes = org.web3j.utils.Numeric.hexStringToByteArray(proofStr);
+                    log.debug("Decoded proof from hex string, length: {}", proofBytes.length);
+                } catch (Exception e) {
+                    log.error("Failed to decode proof hex string: {}", proofStr, e);
+                    proofBytes = proofStr.getBytes(StandardCharsets.UTF_8);
+                }
+            } else {
+                // Try to parse as JSON and ABI-encode it
+                try {
+                    proofBytes = parseAndEncodeProofJson(proofStr);
+                    log.info("Successfully parsed and ABI-encoded proof JSON, length: {}", proofBytes.length);
+                } catch (Exception e) {
+                    log.error("Failed to parse proof as JSON, falling back to UTF-8 encoding: {}", e.getMessage());
+                    proofBytes = proofStr.getBytes(StandardCharsets.UTF_8);
+                }
+            }
+        }
         return new SerializedOutput(inputBytes, outputBytes, proofBytes);
+    }
+
+    /**
+     * Parses proof JSON and ABI-encodes it in the format expected by ImmediateFinalizeVerifier.
+     * Expected format: (bytes32 requestId, bytes32 commitmentHash, bytes32 inputHash,
+     *                   bytes32 resultHash, address nodeAddress, uint256 timestamp, bytes signature)
+     */
+    private byte[] parseAndEncodeProofJson(String proofJson) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        var proofMap = mapper.readValue(proofJson, Map.class);
+
+        // Extract fields from JSON
+        String requestId = (String) proofMap.get("requestId");
+        String commitmentHash = (String) proofMap.get("commitmentHash");
+        String inputHash = (String) proofMap.get("inputHash");
+        String resultHash = (String) proofMap.get("resultHash");
+        String nodeAddress = (String) proofMap.get("nodeAddress");
+        Object timestampObj = proofMap.get("timestamp");
+        String signature = (String) proofMap.get("signature");
+
+        if (
+            requestId == null ||
+            commitmentHash == null ||
+            inputHash == null ||
+            resultHash == null ||
+            nodeAddress == null ||
+            timestampObj == null ||
+            signature == null
+        ) {
+            throw new IllegalArgumentException("Proof JSON is missing required fields");
+        }
+
+        log.debug("Parsing proof JSON - requestId: {}, nodeAddress: {}, timestamp: {}", requestId, nodeAddress, timestampObj);
+
+        // Convert timestamp to BigInteger
+        BigInteger timestamp;
+        if (timestampObj instanceof Number) {
+            timestamp = BigInteger.valueOf(((Number) timestampObj).longValue());
+        } else {
+            timestamp = new BigInteger(timestampObj.toString());
+        }
+
+        // Decode hex strings to bytes
+        byte[] requestIdBytes = org.web3j.utils.Numeric.hexStringToByteArray(requestId);
+        byte[] commitmentHashBytes = org.web3j.utils.Numeric.hexStringToByteArray(commitmentHash);
+        byte[] inputHashBytes = org.web3j.utils.Numeric.hexStringToByteArray(inputHash);
+        byte[] resultHashBytes = org.web3j.utils.Numeric.hexStringToByteArray(resultHash);
+        byte[] signatureBytes = org.web3j.utils.Numeric.hexStringToByteArray(signature);
+
+        // ABI-encode the proof data
+        // Format: (bytes32, bytes32, bytes32, bytes32, address, uint256, bytes)
+        org.web3j.abi.datatypes.Function dummyFunction = new org.web3j.abi.datatypes.Function(
+            "dummy",
+            Arrays.asList(
+                new org.web3j.abi.datatypes.generated.Bytes32(requestIdBytes),
+                new org.web3j.abi.datatypes.generated.Bytes32(commitmentHashBytes),
+                new org.web3j.abi.datatypes.generated.Bytes32(inputHashBytes),
+                new org.web3j.abi.datatypes.generated.Bytes32(resultHashBytes),
+                new org.web3j.abi.datatypes.Address(nodeAddress),
+                new org.web3j.abi.datatypes.generated.Uint256(timestamp),
+                new org.web3j.abi.datatypes.DynamicBytes(signatureBytes)
+            ),
+            Collections.emptyList()
+        );
+
+        // Encode and strip the function selector (first 4 bytes)
+        String encoded = org.web3j.abi.FunctionEncoder.encode(dummyFunction);
+        byte[] encodedBytes = org.web3j.utils.Numeric.hexStringToByteArray(encoded);
+
+        // Remove the function selector (first 4 bytes) to get just the parameters
+        byte[] result = new byte[encodedBytes.length - 4];
+        System.arraycopy(encodedBytes, 4, result, 0, result.length);
+
+        log.info(
+            "ABI-encoded proof: requestId={}, commitmentHash={}, inputHash={}, resultHash={}, nodeAddress={}, timestamp={}, encoded length={}",
+            requestId,
+            commitmentHash,
+            inputHash,
+            resultHash,
+            nodeAddress,
+            timestamp,
+            result.length
+        );
+        log.info("IMPORTANT: Proof contains resultHash={} - this must match the hash of the output being sent", resultHash);
+
+        return result;
     }
 
     private record SerializedOutput(byte[] input, byte[] output, byte[] proof) {}

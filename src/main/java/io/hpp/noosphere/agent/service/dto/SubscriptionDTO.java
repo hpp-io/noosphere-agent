@@ -203,6 +203,13 @@ public class SubscriptionDTO implements Serializable {
     }
 
     /**
+     *  Check if subscription is cancelled
+     */
+    public boolean isCancelled() {
+        return client == null || client.isEmpty() || client.equals(ZERO_ADDRESS);
+    }
+
+    /**
      * 커스텀 toString (긴 주소들을 축약해서 표시)
      */
     @Override
