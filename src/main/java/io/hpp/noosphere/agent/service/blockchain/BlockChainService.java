@@ -632,8 +632,12 @@ public class BlockChainService {
             );
         } else {
             try {
-                // Use ObjectMapper to correctly serialize the input object (Map, List, etc.) to JSON bytes.
-                inputBytes = new ObjectMapper().writeValueAsBytes(output.getInputs());
+                // Use ObjectMapper with consistent configuration
+                ObjectMapper mapper = new ObjectMapper();
+                mapper.configure(com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+                mapper.configure(com.fasterxml.jackson.databind.MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+
+                inputBytes = mapper.writeValueAsBytes(output.getInputs());
                 log.info(
                     "Serialized input using JSON: length={}, input type={}, sha3=0x{}",
                     inputBytes.length,
@@ -658,13 +662,20 @@ public class BlockChainService {
             );
         } else {
             try {
-                // Use ObjectMapper to correctly serialize the output object (Map, List, etc.) to JSON bytes.
-                outputBytes = new ObjectMapper().writeValueAsBytes(output.getOutput());
+                // Use ObjectMapper with consistent configuration to match buildProofInput
+                ObjectMapper mapper = new ObjectMapper();
+                // Configure for deterministic JSON output (same as buildProofInput)
+                mapper.configure(com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+                mapper.configure(com.fasterxml.jackson.databind.MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+
+                outputBytes = mapper.writeValueAsBytes(output.getOutput());
+                String jsonStr = new String(outputBytes, StandardCharsets.UTF_8);
                 log.info(
-                    "Serialized output using JSON: length={}, output type={}, sha3=0x{}",
+                    "Serialized output using JSON: length={}, output type={}, sha3=0x{}, json: {}",
                     outputBytes.length,
                     output.getOutput().getClass().getSimpleName(),
-                    org.web3j.utils.Numeric.toHexStringNoPrefix(org.web3j.crypto.Hash.sha3(outputBytes))
+                    org.web3j.utils.Numeric.toHexStringNoPrefix(org.web3j.crypto.Hash.sha3(outputBytes)),
+                    jsonStr.length() > 100 ? jsonStr.substring(0, 100) + "..." : jsonStr
                 );
             } catch (JsonProcessingException e) {
                 log.error("Failed to serialize container output, falling back to toString()", e);

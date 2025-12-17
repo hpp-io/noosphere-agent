@@ -242,17 +242,33 @@ public class ComputationService {
                                             ? extractedProof.substring(0, 50) + "..."
                                             : extractedProof
                                     );
+                                } else {
+                                    log.warn("Response JSON does not contain 'proof' field. Available keys: {}", responseMap.keySet());
                                 }
                             } catch (Exception e) {
-                                log.warn("Failed to parse proof response as JSON, using raw response: {}", e.getMessage());
+                                log.error("Failed to parse proof response as JSON: {}", e.getMessage(), e);
                             }
                         }
 
                         // Cast the last result to ContainerOutputDTO to set the proof.
-                        ContainerResultDTO lastResult = results.getLast();
-                        if (lastResult instanceof ContainerOutputDTO) {
-                            ((ContainerOutputDTO) lastResult).setProof(extractedProof);
-                            log.info("Proof generated and attached to the result.");
+                        log.debug("Attempting to attach proof to result. Results size: {}", results.size());
+                        try {
+                            ContainerResultDTO lastResult = results.getLast();
+                            log.debug(
+                                "Last result type: {}, is ContainerOutputDTO: {}",
+                                lastResult.getClass().getSimpleName(),
+                                lastResult instanceof ContainerOutputDTO
+                            );
+
+                            if (lastResult instanceof ContainerOutputDTO) {
+                                ((ContainerOutputDTO) lastResult).setProof(extractedProof);
+                                log.info("Proof generated and attached to the result.");
+                            } else {
+                                log.error("Last result is not ContainerOutputDTO, it is: {}", lastResult.getClass().getName());
+                            }
+                        } catch (Exception e) {
+                            log.error("CRITICAL ERROR: Failed to attach proof to result: {}", e.getMessage(), e);
+                            throw e; // Re-throw to see the full error
                         }
                     }
                 } catch (Exception e) {
@@ -489,9 +505,18 @@ public class ComputationService {
                 outputString.length() > 50 ? outputString.substring(0, 50) + "..." : outputString
             );
         } else {
-            // Complex object, use JSON
-            outputString = new ObjectMapper().writeValueAsString(actualOutput);
-            log.info("buildProofInput - JSON-serialized complex output, type: {}", actualOutput.getClass().getSimpleName());
+            // Complex object, use JSON with consistent configuration
+            ObjectMapper mapper = new ObjectMapper();
+            // Configure for deterministic JSON output
+            mapper.configure(com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+            mapper.configure(com.fasterxml.jackson.databind.MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+
+            outputString = mapper.writeValueAsString(actualOutput);
+            log.info(
+                "buildProofInput - JSON-serialized complex output, type: {}, json: {}",
+                actualOutput.getClass().getSimpleName(),
+                outputString.length() > 100 ? outputString.substring(0, 100) + "..." : outputString
+            );
         }
         String outputHex = Numeric.toHexString(outputString.getBytes(StandardCharsets.UTF_8));
 
